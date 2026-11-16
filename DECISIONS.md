@@ -39,3 +39,26 @@ calling, structured output and Hinglish, so more of the correctness has to come 
 validation (Pydantic schemas, retries, the tool-call cap). Staying on the OpenAI-compatible
 surface means no provider-specific features. The eval cache is recorded against one model, so
 switching model makes the committed numbers stale until the eval is re-recorded.
+
+## 3. Double-booking is prevented by a partial unique index in Postgres
+
+**Chosen:** a unique index on `service_requests (clinician_id, scheduled_for) WHERE status =
+'BOOKED'`. `app/booking.py` does not check whether a slot is free. It inserts the row; if the
+slot is already held, Postgres rejects the insert, and the code reads the constraint name off
+the error and turns it into one sentence for the patient with the nearest free slots.
+
+**Rejected:** checking in Python first ("select the slot, and insert if it is empty"). Two
+requests in the same instant both see an empty slot and both insert. With the index removed,
+our concurrency test writes two rows; with it, one. Also rejected: `SELECT ... FOR UPDATE` or
+an advisory lock, which work only if every writer remembers to take the lock.
+
+**Why the database:** it is the one place every writer passes through, whichever process,
+script or future service does the writing, so the rule cannot be skipped. The index is partial
+so that a cancelled booking frees the slot. Society is left out of it on purpose: a clinician
+who visits two societies still has one calendar.
+
+**Cost:** the losing patient finds out only after the insert fails, so the "slot taken" path
+is an exception path that has to be handled and tested. The rule is tied to the status values:
+a new "active" status (say `CONFIRMED`) needs a migration to the index, or it silently stops
+protecting those rows. One lab collection slot is meant to cover several tests, but a second
+test at the same slot is rejected like any other double booking; that is a known gap.
