@@ -30,10 +30,9 @@ change. The model name is set when the LLM is first wired in.
 
 **Rejected:** coding against one provider's own SDK (for example OpenAI or Anthropic directly).
 
-**Why:** model choice is not graded, so the cheaper and faster option is enough. Groq's low
-latency suits token streaming and keeps the safety classifier, which runs before everything
-else on every message, from adding a noticeable delay. Keeping the provider in config means a
-grader can run it with whatever key they have.
+**Why:** Groq has a free tier, and that is the only reason it is the default. Model choice is
+not graded, so nothing here depends on Groq specifically. Keeping the provider in config means
+it can be replaced with any LLM, and a grader can run it with whatever key they have.
 
 **Cost:** the open-weight models Groq hosts are less reliable than frontier models at tool
 calling, structured output and Hinglish, so more of the correctness has to come from our own
