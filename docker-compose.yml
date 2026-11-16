@@ -1,0 +1,39 @@
+services:
+  db:
+    # Postgres 16 with the pgvector extension pre-installed.
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: concierge
+      POSTGRES_PASSWORD: concierge # local dev only, not a secret
+      POSTGRES_DB: concierge
+    ports:
+      - "${DB_HOST_PORT:-5433}:5432" # 5433 on the host so it doesn't clash with a local Postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U concierge -d concierge"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy # wait until Postgres accepts connections
+    environment:
+      # Inside the compose network the database host is the service name "db".
+      DATABASE_URL: postgresql+psycopg://concierge:concierge@db:5432/concierge
+      # ${VAR:-default} is filled from .env if it exists; a missing .env is fine.
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+    ports:
+      - "${APP_HOST_PORT:-8000}:8000"
+    volumes:
+      - .:/app # live-edit code without rebuilding
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  pgdata:
