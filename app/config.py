@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://concierge:concierge@localhost:5433/concierge"
+    db_statement_timeout_ms: int = 5000
 
     # Any OpenAI-compatible endpoint works (Groq, OpenAI, OpenRouter, Ollama...).
     llm_provider: str = "groq"
