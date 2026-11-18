@@ -1,3 +1,12 @@
+# ---- Stage 1: build the React frontend into static files ----
+FROM node:22-slim AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
+
+# ---- Stage 2: the Python app, which also serves the built frontend ----
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -12,6 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV FASTEMBED_CACHE_PATH=/opt/models
 COPY app/__init__.py app/embeddings.py app/
 RUN python -m app.embeddings
+
+# The built page. Outside /app for the same reason as the model weights.
+COPY --from=frontend /frontend/dist /opt/frontend
 
 COPY . .
 

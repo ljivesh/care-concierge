@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # Field names map to env vars case-insensitively: database_url <- DATABASE_URL
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Where the built React app lives (the Dockerfile puts it here).
+    frontend_dir: str = "/opt/frontend"
+
     database_url: str = "postgresql+psycopg://concierge:concierge@localhost:5433/concierge"
     db_statement_timeout_ms: int = 5000
     tool_timeout_s: float = 10.0
