@@ -124,7 +124,7 @@ async def transcript(thread_id: str, request: Request) -> dict:
         elif isinstance(m, AIMessage):
             for call in m.tool_calls:
                 messages.append({"role": "tool_call", "id": call["id"], "name": call["name"], "args": call["args"]})
-            if m.content:
+            if str(m.content).strip():
                 messages.append({"role": "assistant", "content": m.content})
     return {
         "thread_id": thread_id,

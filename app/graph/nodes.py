@@ -42,7 +42,8 @@ log = logging.getLogger("concierge.graph")
 # Which tools the model may use, by intent. No intent gives it escalate_emergency:
 # only the escalate node calls that.
 TOOLS_FOR_INTENT = {
-    Intent.BOOK_SERVICE.value: {"book_service", "list_service_requests"},
+    # Search is included so "when does the cardiologist visit?" can be answered mid-booking.
+    Intent.BOOK_SERVICE.value: {"book_service", "list_service_requests", "search_clinic_docs"},
     Intent.LIST_SERVICES.value: {"list_service_requests"},
     Intent.LOG_SYMPTOM.value: {"log_symptom"},
     Intent.CLINIC_INFO.value: {"search_clinic_docs"},
@@ -186,7 +187,8 @@ def make_respond_node(deps: Deps):
             return {"messages": [AIMessage(replies.try_again(Language(state["language"])))]}
 
         if reply.tool_calls:
-            return {"messages": [reply]}
+            # Any text alongside a tool call is not the reply; keep only the call.
+            return {"messages": [AIMessage(content="", tool_calls=reply.tool_calls, id=reply.id)]}
 
         text = str(reply.content).strip()
         if respond.NO_ANSWER in text:
