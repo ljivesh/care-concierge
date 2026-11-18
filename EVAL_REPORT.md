@@ -112,10 +112,13 @@ compound question separately.
 | Forbidden text in a reply | 0 |
 | Model outputs missing from the cache | 0 |
 
-The failing exit code can be seen with `make eval-fresh EVAL_ARGS=` replaced by the dense run:
-`docker compose exec -T app python -m evals.run --dense-only --intent-file
-evals/fresh_intent_safety.yaml --retrieval-file evals/fresh_retrieval.yaml` exits 1, because
-retrieval is 4/6.
+To see a failing exit code, run the fresh set with keyword search off. It exits 1 because
+retrieval is 4/6:
+
+```
+docker compose exec -T app python -m evals.run --dense-only \
+  --intent-file evals/fresh_intent_safety.yaml --retrieval-file evals/fresh_retrieval.yaml
+```
 
 The similarity threshold is 0.30, picked as just under the lowest best-passage score of any
 answerable question in the main set (0.35). If even the closest passage scores below it, the
