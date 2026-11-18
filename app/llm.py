@@ -23,6 +23,8 @@ def make_llm(settings: Settings) -> ChatOpenAI:
             f"Unknown LLM_PROVIDER '{settings.llm_provider}'. Use one of "
             f"{sorted(PROVIDER_BASE_URLS)}, or set LLM_BASE_URL to an OpenAI-compatible endpoint."
         )
+    # People often paste the full endpoint. The client adds /chat/completions itself.
+    base_url = base_url.rstrip("/").removesuffix("/chat/completions")
     return ChatOpenAI(
         model=settings.llm_model,
         # With no key the app still starts; every model call then fails, and the
