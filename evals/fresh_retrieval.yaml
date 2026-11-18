@@ -1,0 +1,10 @@
+# Seven questions written after the main set, run once, nothing tuned afterwards.
+# Same format as retrieval.yaml.
+
+- { id: f-soc-01, patient_id: pat_013, question: "Which days is home collection not available?", expect: { doc_id: annex-lotus-tower } }
+- { id: f-soc-02, patient_id: pat_020, question: "bone doctor yahan aata hai kya", expect: { doc_id: annex-royal-palms } }
+- { id: f-soc-03, patient_id: pat_002, question: "एम्बुलेंस किस गेट से आएगी?", expect: { doc_id: annex-shivalik-greens } }
+- { id: f-ver-01, patient_id: pat_007, question: "How many specialist consultations are covered?", expect: { doc_id: plan-coverage, version: 2 } }
+- { id: f-doc-01, patient_id: pat_014, question: "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?", expect: { doc_id: clinic-policy } }
+- { id: f-doc-02, patient_id: pat_012, question: "CBC ki report kitni der mein aati hai", expect: { doc_id: department-directory } }
+- { id: f-none-01, patient_id: pat_008, question: "Do you have a pharmacy that delivers medicines?", expect: none }

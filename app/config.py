@@ -22,8 +22,10 @@ class Settings(BaseSettings):
     max_tool_calls_per_turn: int = 4
 
     # Passages scoring below this cosine similarity are not used as evidence.
-    # Low on purpose: it only removes clearly unrelated text. Whether the passages
-    # that remain actually answer the question is decided by the reply model.
+    # How it was picked: just under the lowest best-passage score of any answerable
+    # question in evals/retrieval.yaml (0.35), so no answerable question is cut off.
+    # It only removes clearly unrelated text; whether the passages that remain
+    # actually answer the question is decided by the reply model (NO_ANSWER).
     retrieval_min_similarity: float = 0.30
 
     # Any OpenAI-compatible endpoint works. LLM_PROVIDER picks a known base URL

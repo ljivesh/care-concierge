@@ -113,7 +113,7 @@ def make_router_node(deps: Deps):
         ][-HISTORY_FOR_ROUTER:]
         try:
             route = await asyncio.wait_for(
-                router.ask_model(deps.llm, conversation), timeout=deps.settings.llm_timeout_s
+                router.route(deps.llm, conversation), timeout=deps.settings.llm_timeout_s
             )
         except Exception as exc:
             # Safety already passed, so the message is safe to answer; we just could not label it.
