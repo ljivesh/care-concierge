@@ -20,11 +20,15 @@ class Settings(BaseSettings):
     # Passages scoring below this cosine similarity are not used as evidence.
     retrieval_min_similarity: float = 0.36
 
-    # Any OpenAI-compatible endpoint works (Groq, OpenAI, OpenRouter, Ollama...).
+    # Any OpenAI-compatible endpoint works. LLM_PROVIDER picks a known base URL
+    # (groq, openai, openrouter); LLM_BASE_URL overrides it for anything else.
     llm_provider: str = "groq"
-    llm_base_url: str = "https://api.groq.com/openai/v1"
+    llm_base_url: str = ""
     llm_api_key: str = ""  # empty is valid: `make eval` must run without a key
     llm_model: str = ""
+    llm_timeout_s: float = 30.0
+    # The safety check runs before everything else, so it gets a tighter limit.
+    safety_timeout_s: float = 8.0
 
 
 @lru_cache

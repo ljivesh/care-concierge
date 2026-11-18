@@ -65,3 +65,27 @@ is an exception path that has to be handled and tested. The rule is tied to the 
 a new "active" status (say `CONFIRMED`) needs a migration to the index, or it silently stops
 protecting those rows. One lab collection slot is meant to cover several tests, but a second
 test at the same slot is rejected like any other double booking; that is a known gap.
+
+## 4. When the safety classifier fails, we fail closed
+
+**Chosen:** fail closed. If the classifier times out (8 seconds), the provider errors, or its
+answer is not one of the three verdicts, `safety.classify` returns an outcome with no verdict.
+The message is not routed, no tool runs, and the patient gets a fixed, hand-written reply in
+their language: we cannot process this right now; if it is an emergency call 112 or the
+hospital emergency desk; otherwise try again or call the wellness room for a nurse. Each
+failure is logged as one line starting `safety_classifier_failed kind=timeout|error`.
+
+**Rejected:** fail open, letting the message through as if it were SAFE. Then during an outage
+"my father collapsed" would be handled as an ordinary message, and a dosage question could be
+answered by the main model with no gate in front of it. The gate would be off exactly when
+nobody is watching it.
+
+**Why:** the two mistakes are not equal. Blocking a booking costs the patient a retry or a
+phone call. Missing an emergency or giving medical advice can hurt someone. The fixed reply
+needs no model, so it still works when the provider is down, and it always carries 112.
+
+**Cost:** while the classifier is down the concierge does nothing useful: every booking and
+every clinic question is refused, including harmless ones. A real emergency in that window
+gets the 112 guidance but no escalation row and no nurse callback, because we do not escalate
+on a message we could not classify. A flaky provider therefore shows up directly as refused
+messages, which is why failures are logged in a countable form.
