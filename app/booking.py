@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import scoping
 from app.contract import Service
+from app.errors import ConciergeError, ErrorCode, violated_constraint
 from app.db.models import UQ_ACTIVE_SLOT, Clinician, ServiceRequest, Society
 
 WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]  # date.weekday() order
@@ -24,23 +25,11 @@ SUGGESTION_DAYS = 14  # how far ahead to look for free slots to offer
 SUGGESTION_LIMIT = 3
 
 
-class BookingErrorCode(str, Enum):
-    PATIENT_NOT_FOUND = "PATIENT_NOT_FOUND"
-    UNKNOWN_SUBTYPE = "UNKNOWN_SUBTYPE"
-    NOT_OFFERED_AT_SOCIETY = "NOT_OFFERED_AT_SOCIETY"
-    NOT_A_SLOT = "NOT_A_SLOT"
-    SLOT_TAKEN = "SLOT_TAKEN"
-    REQUEST_ID_REUSED = "REQUEST_ID_REUSED"
-
-
-class BookingError(Exception):
-    """A booking we refuse, with a sentence the patient can read."""
-
-    def __init__(self, code: BookingErrorCode, message: str, suggestions: list[dict] | None = None):
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.suggestions = suggestions or []
+class BookingStatus(str, Enum):
+    BOOKED = "BOOKED"
+    CANCELLED = "CANCELLED"
+    COMPLETED = "COMPLETED"
+    NO_SHOW = "NO_SHOW"
 
 
 # ---------- slot grid (pure functions, no database) ----------
@@ -116,11 +105,6 @@ def _with_suggestions(sentence: str, suggestions: list[dict]) -> str:
     return f"{sentence} Nearest free slots: {'; '.join(s['label'] for s in suggestions)}."
 
 
-def _violated_constraint(exc: IntegrityError) -> str | None:
-    """Postgres reports which constraint rejected the write."""
-    return getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
-
-
 # ---------- the booking itself ----------
 
 
@@ -135,12 +119,12 @@ async def book(
 ) -> dict:
     """Create a booking, or return the existing one if this request_id was seen before.
 
-    Raises BookingError with a patient-readable message when the booking is refused.
+    Raises ConciergeError with a patient-readable message when the booking is refused.
     """
     async with session_factory() as session:
         patient = await scoping.get_patient(session, patient_id)
         if patient is None:
-            raise BookingError(BookingErrorCode.PATIENT_NOT_FOUND, "We could not find that patient.")
+            raise ConciergeError(ErrorCode.PATIENT_NOT_FOUND, "We could not find that patient.")
         society_id = patient.society_id
 
         # A repeated request: report the first result, write nothing.
@@ -160,8 +144,8 @@ async def book(
         )
 
         if not await _subtype_exists(session, service, subtype):
-            raise BookingError(
-                BookingErrorCode.UNKNOWN_SUBTYPE,
+            raise ConciergeError(
+                ErrorCode.UNKNOWN_SUBTYPE,
                 f"'{subtype}' is not a {service.value} service we know.",
             )
 
@@ -169,8 +153,8 @@ async def book(
             session, society_id=society_id, service=service, subtype=subtype
         )
         if not clinicians:
-            raise BookingError(
-                BookingErrorCode.NOT_OFFERED_AT_SOCIETY,
+            raise ConciergeError(
+                ErrorCode.NOT_OFFERED_AT_SOCIETY,
                 f"{subtype} is not offered at {society.name}.",
             )
 
@@ -180,8 +164,8 @@ async def book(
             suggestions = await _free_slots_near(
                 session, society_id=society_id, clinician=clinicians[0], tz=tz, wanted=wanted
             )
-            raise BookingError(
-                BookingErrorCode.NOT_A_SLOT,
+            raise ConciergeError(
+                ErrorCode.NOT_A_SLOT,
                 _with_suggestions(
                     f"{clinicians[0].name} has no slot starting at {_fmt(wanted)}.", suggestions
                 ),
@@ -199,7 +183,7 @@ async def book(
                     service=service.value,
                     subtype=subtype,
                     scheduled_for=wanted,
-                    status="BOOKED",
+                    status=BookingStatus.BOOKED.value,
                     request_id=request_id,
                 )
                 session.add(row)
@@ -213,9 +197,9 @@ async def book(
                 )
             if existing:
                 return existing
-            if _violated_constraint(exc) != UQ_ACTIVE_SLOT:
-                raise BookingError(
-                    BookingErrorCode.REQUEST_ID_REUSED,
+            if violated_constraint(exc) != UQ_ACTIVE_SLOT:
+                raise ConciergeError(
+                    ErrorCode.REQUEST_ID_REUSED,
                     "This request was already used for a different booking. Please send it again.",
                 ) from exc
             # Otherwise the slot was taken: try the next clinician, if any.
@@ -224,8 +208,8 @@ async def book(
         suggestions = await _free_slots_near(
             session, society_id=society_id, clinician=on_grid[0], tz=tz, wanted=wanted
         )
-    raise BookingError(
-        BookingErrorCode.SLOT_TAKEN,
+    raise ConciergeError(
+        ErrorCode.SLOT_TAKEN,
         _with_suggestions(
             f"The {_fmt(wanted)} slot with {on_grid[0].name} has just been taken.", suggestions
         ),

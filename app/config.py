@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://concierge:concierge@localhost:5433/concierge"
     db_statement_timeout_ms: int = 5000
+    tool_timeout_s: float = 10.0
 
     # Any OpenAI-compatible endpoint works (Groq, OpenAI, OpenRouter, Ollama...).
     llm_provider: str = "groq"

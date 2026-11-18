@@ -9,7 +9,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from sqlalchemy import func, select, update
 
-from app.booking import BookingError, BookingErrorCode, book, slots_on
+from app.booking import book, slots_on
+from app.errors import ConciergeError, ErrorCode
 from app.contract import Service
 from app.db.models import Clinician, ServiceRequest
 
@@ -51,11 +52,11 @@ async def test_two_simultaneous_bookings_one_row_one_clear_error(session_factory
     )
 
     winners = [r for r in results if isinstance(r, dict)]
-    losers = [r for r in results if isinstance(r, BookingError)]
+    losers = [r for r in results if isinstance(r, ConciergeError)]
     assert len(winners) == 1 and len(losers) == 1, results
     assert await count_bookings(session_factory) == 1
 
-    assert losers[0].code == BookingErrorCode.SLOT_TAKEN
+    assert losers[0].code == ErrorCode.SLOT_TAKEN
     assert "taken" in losers[0].message
     assert_clear_sentence(losers[0].message)
 
@@ -68,7 +69,7 @@ async def test_eight_simultaneous_bookings_still_one_row(session_factory):
 
     assert sum(isinstance(r, dict) for r in results) == 1
     assert all(
-        isinstance(r, dict) or (isinstance(r, BookingError) and r.code == BookingErrorCode.SLOT_TAKEN)
+        isinstance(r, dict) or (isinstance(r, ConciergeError) and r.code == ErrorCode.SLOT_TAKEN)
         for r in results
     ), results
     assert await count_bookings(session_factory) == 1
@@ -102,13 +103,13 @@ async def test_request_id_of_another_patient_is_refused_not_leaked(session_facto
     shared_id = uuid.uuid4()
     await book(session_factory, **cardiology("pat_001", request_id=shared_id))
 
-    with pytest.raises(BookingError) as refused:
+    with pytest.raises(ConciergeError) as refused:
         await book(
             session_factory,
             **cardiology("pat_002", when=TUESDAY_1030.replace(minute=0), request_id=shared_id),
         )
 
-    assert refused.value.code == BookingErrorCode.REQUEST_ID_REUSED
+    assert refused.value.code == ErrorCode.REQUEST_ID_REUSED
     assert_clear_sentence(refused.value.message)
     assert await count_bookings(session_factory) == 1
 
@@ -145,10 +146,10 @@ async def test_booking_picks_the_clinician_and_society_from_the_patient(session_
 
 
 async def test_time_off_the_slot_grid_is_refused_with_free_slots(session_factory):
-    with pytest.raises(BookingError) as refused:
+    with pytest.raises(ConciergeError) as refused:
         await book(session_factory, **cardiology("pat_001", when=TUESDAY_1030.replace(minute=15)))
 
-    assert refused.value.code == BookingErrorCode.NOT_A_SLOT
+    assert refused.value.code == ErrorCode.NOT_A_SLOT
     assert [s["scheduled_for"] for s in refused.value.suggestions][:2] == [
         "2027-01-12T10:00:00+05:30",
         "2027-01-12T10:30:00+05:30",
@@ -159,7 +160,7 @@ async def test_time_off_the_slot_grid_is_refused_with_free_slots(session_factory
 async def test_taken_slot_offers_the_other_free_slot(session_factory):
     await book(session_factory, **cardiology("pat_001"))
 
-    with pytest.raises(BookingError) as refused:
+    with pytest.raises(ConciergeError) as refused:
         await book(session_factory, **cardiology("pat_002"))
 
     assert refused.value.suggestions[0]["scheduled_for"] == "2027-01-12T10:00:00+05:30"
@@ -167,7 +168,7 @@ async def test_taken_slot_offers_the_other_free_slot(session_factory):
 
 async def test_service_not_offered_at_the_patients_society(session_factory):
     # pat_010 lives at Lotus Tower, where physiotherapy is not offered.
-    with pytest.raises(BookingError) as refused:
+    with pytest.raises(ConciergeError) as refused:
         await book(
             session_factory,
             patient_id="pat_010",
@@ -177,15 +178,15 @@ async def test_service_not_offered_at_the_patients_society(session_factory):
             request_id=uuid.uuid4(),
         )
 
-    assert refused.value.code == BookingErrorCode.NOT_OFFERED_AT_SOCIETY
+    assert refused.value.code == ErrorCode.NOT_OFFERED_AT_SOCIETY
     assert "Lotus Tower" in refused.value.message
 
 
 async def test_unknown_subtype_is_refused(session_factory):
-    with pytest.raises(BookingError) as refused:
+    with pytest.raises(ConciergeError) as refused:
         await book(session_factory, **{**cardiology("pat_001"), "subtype": "NEUROLOGY"})
 
-    assert refused.value.code == BookingErrorCode.UNKNOWN_SUBTYPE
+    assert refused.value.code == ErrorCode.UNKNOWN_SUBTYPE
 
 
 async def test_cancelled_booking_frees_the_slot(session_factory):
