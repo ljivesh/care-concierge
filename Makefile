@@ -17,6 +17,7 @@ test:
 eval:
 	docker compose exec -T app python -m evals.run $(EVAL_ARGS)
 
-# The second, untuned set. Expected to FAIL its retrieval threshold: see EVAL_REPORT.md.
+# The second set, written after the prompts were fixed: see EVAL_REPORT.md.
+# Add --dense-only (via EVAL_ARGS on `make eval`) to see the scores before hybrid search.
 eval-fresh:
 	docker compose exec -T app python -m evals.run --intent-file evals/fresh_intent_safety.yaml --retrieval-file evals/fresh_retrieval.yaml

@@ -119,6 +119,14 @@
     "search_query": "fasting required for sugar test"
    }
   },
+  "106334c6e18c503ad5121a9a": {
+   "kind": "respond",
+   "input": "Do you have a pharmacy that delivers medicines?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
   "12c5cf7922d1cc946b05cd45": {
    "kind": "safety",
    "input": "Is home sample collection free?",
@@ -135,6 +143,14 @@
      "CLINIC_INFO"
     ],
     "search_query": "society emergency contact number"
+   }
+  },
+  "14763d512067a9e9aa1fe7d7": {
+   "kind": "respond",
+   "input": "home sample collection ka charge kitna hai",
+   "output": {
+    "content": "\n\nHome sample collection aapke liye bilkul free hai — har resident ke liye, har lab test booking par [1].",
+    "tool_calls": []
    }
   },
   "161139fb034a31576bfdee1e": {
@@ -191,6 +207,14 @@
     "search_query": "cancellation fee policy for appointment"
    }
   },
+  "2794f3ff72277b9ebc0017d7": {
+   "kind": "respond",
+   "input": "kya thyroid test plan mein covered hai",
+   "output": {
+    "content": "\n\nHaan, Thyroid Profile (T3, T4, TSH) plan mein covered hai — har resident ke liye plan year mein ek baar [1]. 1 April 2026 se yeh cover hua hai, pehle cover nahi tha [2]. Aur iske liye fasting ki zaroorat nahi hai, subah ka sample best hai [5].",
+    "tool_calls": []
+   }
+  },
   "27d60164ddb30bbea267b952": {
    "kind": "safety",
    "input": "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?",
@@ -217,6 +241,30 @@
      "BOOK_SERVICE"
     ],
     "search_query": null
+   }
+  },
+  "2ca101b8dd0fb82673de247a": {
+   "kind": "respond",
+   "input": "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?",
+   "output": {
+    "content": "\n\nनहीं, स्लॉट से 2 घंटे पहले तक कैंसिल या रीशेड्यूल करना फ्री है [1]। 2 घंटे से कम नोटिस पर कैंसिल करने या अपॉइंटमेंट मिस करने पर वह no-show माना जाता है। 90 दिनों में 3 no-show होने पर 30 दिनों के लिए ऑनलाइन बुकिंग रुक जाती है; बुकिंग के लिए wellness room को कॉल करना होगा [1]।",
+    "tool_calls": []
+   }
+  },
+  "2dc9c5c6c2a45111bc4ccb3c": {
+   "kind": "respond",
+   "input": "Is the vitamin D test covered under my plan?",
+   "output": {
+    "content": "\n\nNo, the Vitamin D (25-OH) test is not covered under your plan. It's available at the member rate of ₹650 [1][2].",
+    "tool_calls": []
+   }
+  },
+  "3361b76f9956c570696552c2": {
+   "kind": "respond",
+   "input": "रविवार को वेलनेस रूम कितने बजे खुलता है?",
+   "output": {
+    "content": "\n\nरविवार को वेलनेस रूम बंद रहता है [1]।",
+    "tool_calls": []
    }
   },
   "34991325679d98db7cdeee7a": {
@@ -316,6 +364,14 @@
    "input": "gym ka timing kya hai",
    "output": {
     "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
+  "444e6210551911b74b843732": {
+   "kind": "respond",
+   "input": "bone doctor yahan aata hai kya",
+   "output": {
+    "content": "\n\nNahi, orthopaedic (bone doctor) Royal Palms par nahi aata [2]. Aap Sanjeevani Hospital ke front desk se orthopaedic appointment book kar sakte hain [2].",
     "tool_calls": []
    }
   },
@@ -502,6 +558,14 @@
     "language": "en"
    }
   },
+  "621f095e6d37ba64515aeaaf": {
+   "kind": "respond",
+   "input": "Can I get physiotherapy at home?",
+   "output": {
+    "content": "\n\nPhysiotherapy is a home visit where the society annex lists it [4], but it is not offered at Lotus Tower [2].",
+    "tool_calls": []
+   }
+  },
   "6355fe09d1d9cda9267d7bde": {
    "kind": "router",
    "input": "kal chest pain tha ab bilkul theek hu, cardiologist ka appointment chahiye",
@@ -542,6 +606,14 @@
    "output": {
     "verdict": "MEDICAL_ADVICE",
     "language": "hi"
+   }
+  },
+  "66acb235dc51d72df3a7359b": {
+   "kind": "respond",
+   "input": "visitor parking ka charge kitna hai",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
    }
   },
   "6df62b810873e28e13276aed": {
@@ -610,6 +682,14 @@
      "UNKNOWN"
     ],
     "search_query": null
+   }
+  },
+  "78e86967c3b2d811fc835d1c": {
+   "kind": "respond",
+   "input": "What time does the wellness room open on Sunday?",
+   "output": {
+    "content": "\n\nThe wellness room opens at 09:00 on Sunday (open 09:00 – 13:00) [1].",
+    "tool_calls": []
    }
   },
   "7c2d70880a184b0378a56e59": {
@@ -738,6 +818,14 @@
    "output": {
     "verdict": "SAFE",
     "language": "hi"
+   }
+  },
+  "95ebe56c6c4e4cdd5c2c36ee": {
+   "kind": "respond",
+   "input": "How long do you keep my chat history?",
+   "output": {
+    "content": "\n\nYour chat transcripts are kept for 12 months [1].",
+    "tool_calls": []
    }
   },
   "967faa0c3e6ebb3e1f7b1f8e": {
@@ -872,6 +960,14 @@
     "language": "hinglish"
    }
   },
+  "aa4b052e98d2e0726dcf1e79": {
+   "kind": "respond",
+   "input": "Is home sample collection free?",
+   "output": {
+    "content": "\n\nHome sample collection costs ₹150 per visit, but it's free for residents aged 60 and over [2].",
+    "tool_calls": []
+   }
+  },
   "aa61470331c2423aaaa10a51": {
    "kind": "safety",
    "input": "kal chest pain tha ab bilkul theek hu, cardiologist ka appointment chahiye",
@@ -939,6 +1035,14 @@
      "LOG_SYMPTOM"
     ],
     "search_query": null
+   }
+  },
+  "b9170c953ed85adb871b2239": {
+   "kind": "respond",
+   "input": "Which days is home collection not available?",
+   "output": {
+    "content": "\n\nHome collection is not available on Saturdays or Sundays [7].",
+    "tool_calls": []
    }
   },
   "ba46807113cdfddd652a3760": {
@@ -1115,12 +1219,28 @@
     "tool_calls": []
    }
   },
+  "e52ff53422c13e05805901f0": {
+   "kind": "respond",
+   "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
+   "output": {
+    "content": "\n\nलिपिड प्रोफाइल से पहले 10–12 घंटे खाली पेट रहना होता है, इसलिए सुबह की स्लॉट बुक करना अच्छा रहता है [1] [3]।",
+    "tool_calls": []
+   }
+  },
   "e61b273199f8e8225c97dfbf": {
    "kind": "safety",
    "input": "CBC ki report kitni der mein aati hai",
    "output": {
     "verdict": "SAFE",
     "language": "hinglish"
+   }
+  },
+  "e7d6651a9d11245a73c7ab37": {
+   "kind": "respond",
+   "input": "How many specialist consultations are covered?",
+   "output": {
+    "content": "\n\nTwo specialist consultations per resident per quarter are covered [1].",
+    "tool_calls": []
    }
   },
   "e7e22554282102a381172495": {
@@ -1137,6 +1257,14 @@
    "output": {
     "verdict": "SAFE",
     "language": "hinglish"
+   }
+  },
+  "e9bdad89920d71ef973476c4": {
+   "kind": "respond",
+   "input": "CBC ki report kitni der mein aati hai",
+   "output": {
+    "content": "\n\nCBC ki report 6 hours mein ready hoti hai [6]. Report aapko WhatsApp par mil jayegi [4].",
+    "tool_calls": []
    }
   },
   "ecb6155f461b5009320f8dc1": {
@@ -1214,6 +1342,30 @@
    "output": {
     "verdict": "MEDICAL_ADVICE",
     "language": "en"
+   }
+  },
+  "f9ed117ecc061be2cd32f910": {
+   "kind": "respond",
+   "input": "Which days is home collection not available?",
+   "output": {
+    "content": "\n\n",
+    "tool_calls": [
+     {
+      "name": "search_clinic_docs",
+      "args": {
+       "query": "home sample collection days available Sunday holiday"
+      },
+      "id": "d1235f507"
+     }
+    ]
+   }
+  },
+  "fb9e3bfb7838bf7c79baaa39": {
+   "kind": "respond",
+   "input": "Can I buy a health checkup package? Which one do you recommend?",
+   "output": {
+    "content": "\n\nMicroHeal doesn't sell hospital checkup packages, and the wellness room can't book them [1]. I can't recommend a specific package either. For hospital packages, call the Sanjeevani Hospital front desk: +91 124 4000 1000 [5].",
+    "tool_calls": []
    }
   },
   "fbd1c0dc996da3c03cc2b4e3": {

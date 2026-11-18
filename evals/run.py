@@ -260,11 +260,14 @@ async def main() -> int:
     parser.add_argument("--intent-file", type=Path, default=HERE / "intent_safety.yaml")
     parser.add_argument("--retrieval-file", type=Path, default=HERE / "retrieval.yaml")
     parser.add_argument("--k", type=int, default=6, help="passages per search (default 6)")
+    parser.add_argument("--dense-only", action="store_true", help="switch keyword search off, to compare with hybrid")
     parser.add_argument("--record", action="store_true", help="ask the model again for every row and rewrite the cache")
     args = parser.parse_args()
 
     logging.disable(logging.CRITICAL)  # failures are counted and printed below, not logged
     settings = get_settings()
+    if args.dense_only:
+        settings = settings.model_copy(update={"retrieval_hybrid": False})
     live = bool(settings.llm_api_key)
     if args.record and not live:
         print("--record needs LLM_API_KEY to be set.")
@@ -279,11 +282,12 @@ async def main() -> int:
     engine = make_engine(settings)
     session_factory = make_session_factory(engine)
     embedder = Embedder()
-    tools = make_tools(session_factory, embedder, min_similarity=settings.retrieval_min_similarity)
+    tools = make_tools(session_factory, embedder, min_similarity=settings.retrieval_min_similarity, hybrid=settings.retrieval_hybrid)
     graph = build_graph(Deps(llm=llm, tools=tools, settings=settings), InMemorySaver())
 
     mode = "recorded outputs only (no API key)" if not live else ("re-recording every row" if args.record else "recorded outputs, model for anything new")
     print(f"Care Concierge eval. Model outputs: {mode}. Cache recorded with: {cache.recorded_with}.")
+    print(f"Retrieval: {'hybrid (dense + keyword, reciprocal rank fusion)' if settings.retrieval_hybrid else 'dense only'}.")
     try:
         intent_results = [await classify_row(row, llm, settings) for row in intent_rows]
         retrieval_results = [await ask_as_patient(row, graph, session_factory, embedder) for row in retrieval_rows]

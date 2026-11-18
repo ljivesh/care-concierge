@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     engine = make_engine(settings)
     session_factory = make_session_factory(engine)
-    tools = make_tools(session_factory, Embedder(), min_similarity=settings.retrieval_min_similarity)
+    tools = make_tools(session_factory, Embedder(), min_similarity=settings.retrieval_min_similarity, hybrid=settings.retrieval_hybrid)
     async with open_checkpointer(settings) as checkpointer:
         app.state.session_factory = session_factory
         app.state.graph = build_graph(Deps(llm=make_llm(settings), tools=tools, settings=settings), checkpointer)

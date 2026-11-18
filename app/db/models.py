@@ -14,6 +14,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     CheckConstraint,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
@@ -27,7 +28,7 @@ from sqlalchemy import (
     text,
 )
 from pgvector.sqlalchemy import Vector
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # Constraint names referenced by the error-translation code.
@@ -210,6 +211,7 @@ class DocChunk(Base):
     __tablename__ = "doc_chunks"
     __table_args__ = (
         UniqueConstraint("document_id", "chunk_index", name="uq_doc_chunks_document_chunk"),
+        Index("ix_doc_chunks_search_text", "search_text", postgresql_using="gin"),
     )
 
     id: Mapped[int] = mapped_column(Integer, Identity(), primary_key=True)
@@ -218,3 +220,7 @@ class DocChunk(Base):
     heading_path: Mapped[str] = mapped_column(Text)  # "Title > Section > Subsection"
     content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+    # For keyword search. Computed by Postgres from the heading and the text.
+    search_text: Mapped[str] = mapped_column(
+        TSVECTOR, Computed("to_tsvector('english', heading_path || ' ' || content)", persisted=True)
+    )

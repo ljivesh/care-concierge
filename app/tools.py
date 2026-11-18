@@ -109,7 +109,11 @@ class SearchClinicDocsArgs(BaseModel):
 
 
 def make_tools(
-    session_factory: async_sessionmaker[AsyncSession], embedder: Embedder, *, min_similarity: float
+    session_factory: async_sessionmaker[AsyncSession],
+    embedder: Embedder,
+    *,
+    min_similarity: float,
+    hybrid: bool = True,
 ) -> list[BaseTool]:
     """Build the tools around their dependencies. A function, not module-level
     objects, so nothing global is shared and tests can pass their own database."""
@@ -163,10 +167,19 @@ def make_tools(
         (query_embedding,) = await embedder.embed([query])
         async with session_factory() as session:
             passages = await scoping.search_chunks(
-                session, society_id=society_id, query_embedding=query_embedding, k=k
+                session,
+                society_id=society_id,
+                query_embedding=query_embedding,
+                k=k,
+                query_text=query if hybrid else None,  # None switches keyword search off
             )
-        # Abstention: passages below the threshold are not evidence. An empty
-        # list tells the agent to say it does not know and offer a nurse.
+        # Abstention: if even the passage closest in meaning scores below the threshold,
+        # the question is about something the documents do not cover. Return nothing,
+        # which tells the agent to say it does not know and offer a nurse.
+        if not passages or max(p["similarity"] for p in passages) < min_similarity:
+            return []
+        if hybrid:
+            return passages  # keyword matches are kept even when their own similarity is low
         return [p for p in passages if p["similarity"] >= min_similarity]
 
     return [

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     # It only removes clearly unrelated text; whether the passages that remain
     # actually answer the question is decided by the reply model (NO_ANSWER).
     retrieval_min_similarity: float = 0.30
+    # Keyword search merged with dense search (reciprocal rank fusion). False = dense only.
+    retrieval_hybrid: bool = True
 
     # Any OpenAI-compatible endpoint works. LLM_PROVIDER picks a known base URL
     # (cerebras, groq, openai, openrouter); LLM_BASE_URL overrides it for anything else.

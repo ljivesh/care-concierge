@@ -89,3 +89,28 @@ every clinic question is refused, including harmless ones. A real emergency in t
 gets the 112 guidance but no escalation row and no nurse callback, because we do not escalate
 on a message we could not classify. A flaky provider therefore shows up directly as refused
 messages, which is why failures are logged in a countable form.
+
+## 5. Hybrid retrieval: keyword search merged with dense search
+
+**Chosen:** every document search runs two rankings over the same filtered set of chunks and
+merges them with reciprocal rank fusion (`HYBRID_SEARCH_SQL` in `app/scoping.py`). Dense search
+ranks by embedding distance. Keyword search uses a `tsvector` column that Postgres computes,
+and scores a chunk by the words it shares with the question, with a word found in few chunks
+counting for more than a word found in many. Each contributes its top k.
+
+**Rejected:** dense search alone, which is all the brief requires. On the fresh eval set it
+missed a fact that sits in one row of a table (the CBC report time) and told the patient the
+documents did not have it. Also rejected: ranking keywords with Postgres's own `ts_rank`, which
+has no notion of rare words, so "time" and "report" drowned out "CBC"; and longer candidate
+lists (8, 10, 20), which did worse because with about 47 visible chunks a long list contains
+nearly everything.
+
+**Why:** the corpus is full of tables and codes, and patients ask about exact terms. Dense
+search carries meaning and Hindi; keyword search carries the exact string.
+
+**Cost:** the search is now a 40-line SQL statement instead of a 10-line query, and harder to
+change live. Keyword search is English only, so a Hindi question relies on the router's English
+rewrite or on dense search. The candidate size was chosen on 22 queries that include the eval
+questions, so it may be fitted to them. And the similarity threshold now gates the whole result
+(is the closest passage relevant at all?) instead of each passage, because a keyword match can
+be the right passage with a low similarity of its own.

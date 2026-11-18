@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import Select, cast, or_, select
+from sqlalchemy import Select, cast, literal, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,7 +106,7 @@ async def clinicians_offering(
 
 
 def chunk_search_query(*, society_id: str, query_embedding: list[float], k: int) -> Select:
-    """Nearest chunks by cosine distance, among the chunks this society may see.
+    """Dense search only: nearest chunks by cosine distance, among the chunks this society may see.
 
     Both filters are in the WHERE clause, so Postgres applies them BEFORE it
     ranks and cuts to k. Filtering the top k afterwards in Python would be
@@ -115,7 +115,16 @@ def chunk_search_query(*, society_id: str, query_embedding: list[float], k: int)
     """
     distance = DocChunk.embedding.cosine_distance(query_embedding)  # pgvector's <=> operator
     return (
-        select(DocChunk, Document, (1 - distance).label("similarity"))
+        select(
+            DocChunk.heading_path,
+            DocChunk.content,
+            Document.doc_id,
+            Document.version,
+            Document.title,
+            Document.society_id,
+            (1 - distance).label("similarity"),
+            literal(False).label("keyword_match"),
+        )
         .join(Document, Document.id == DocChunk.document_id)
         .where(
             # the current version only: superseded documents are stored but never searched
@@ -128,21 +137,109 @@ def chunk_search_query(*, society_id: str, query_embedding: list[float], k: int)
     )
 
 
-async def search_chunks(
-    session: AsyncSession, *, society_id: str, query_embedding: list[float], k: int
-) -> list[dict]:
-    rows = await session.execute(
-        chunk_search_query(society_id=society_id, query_embedding=query_embedding, k=k)
+# The usual constant for reciprocal rank fusion. It flattens the gap between rank 1 and
+# rank 2, so a chunk ranked well by both searches beats one ranked first by only one.
+RRF_K = 60
+
+# Dense search and keyword search, merged with reciprocal rank fusion (RRF).
+#
+#   visible  the only chunks this patient may see. The society and version filters are
+#            here, in its WHERE clause, and every later step reads only from `visible`.
+#   dense    the nearest chunks by embedding: good at meaning and at other languages.
+#   keyword  chunks sharing words with the question: good at exact terms such as "CBC"
+#            or a fact in a table row. A word found in few chunks counts for more than
+#            a word found in many, so "CBC" outweighs "time".
+#   result   a chunk scores 1/(60 + its rank) in each list it appears in, added up.
+HYBRID_SEARCH_SQL = text(
+    """
+    WITH visible AS (
+        SELECT c.id, c.embedding, c.search_text
+        FROM doc_chunks c
+        JOIN documents d ON d.id = c.document_id
+        WHERE d.is_current IS TRUE
+          AND (d.society_id = :society_id OR d.society_id IS NULL)
+    ),
+    dense AS (
+        SELECT id, row_number() OVER (ORDER BY embedding <=> CAST(:embedding AS vector)) AS rank
+        FROM visible
+        ORDER BY embedding <=> CAST(:embedding AS vector)
+        LIMIT :candidates
+    ),
+    terms AS (
+        -- the question's words, stemmed, without stop words
+        SELECT unnest(tsvector_to_array(to_tsvector('english', :query_text))) AS term
+    ),
+    term_weight AS (
+        SELECT t.term, ln(1 + (SELECT count(*) FROM visible)::float / count(*)) AS weight
+        FROM terms t
+        JOIN visible v ON v.search_text @@ plainto_tsquery('simple', t.term)
+        GROUP BY t.term
+    ),
+    keyword_score AS (
+        SELECT v.id, sum(w.weight) AS score
+        FROM visible v
+        JOIN term_weight w ON v.search_text @@ plainto_tsquery('simple', w.term)
+        GROUP BY v.id
+    ),
+    keyword AS (
+        SELECT id, row_number() OVER (ORDER BY score DESC, id) AS rank
+        FROM keyword_score
+        ORDER BY score DESC, id
+        LIMIT :candidates
     )
+    SELECT c.heading_path, c.content, d.doc_id, d.version, d.title, d.society_id,
+           1 - (c.embedding <=> CAST(:embedding AS vector)) AS similarity,
+           keyword.rank IS NOT NULL AS keyword_match
+    FROM dense
+    FULL OUTER JOIN keyword ON keyword.id = dense.id
+    JOIN doc_chunks c ON c.id = COALESCE(dense.id, keyword.id)
+    JOIN documents d ON d.id = c.document_id
+    ORDER BY COALESCE(1.0 / (:rrf_k + dense.rank), 0) + COALESCE(1.0 / (:rrf_k + keyword.rank), 0) DESC,
+             similarity DESC
+    LIMIT :k
+    """
+)
+
+
+async def search_chunks(
+    session: AsyncSession,
+    *,
+    society_id: str,
+    query_embedding: list[float],
+    k: int,
+    query_text: str | None = None,
+) -> list[dict]:
+    """Search this society's current documents. With `query_text` it is a hybrid
+    search; without it, dense only."""
+    if query_text:
+        rows = await session.execute(
+            HYBRID_SEARCH_SQL,
+            {
+                "society_id": society_id,
+                "embedding": str(query_embedding),  # pgvector reads '[0.1, 0.2, ...]'
+                "query_text": query_text,
+                # Each search contributes its own top k. Longer lists were tried (8, 10, 20)
+                # and did worse: with only ~47 chunks visible, a long list holds almost
+                # everything, so "appears in both lists" stops meaning anything.
+                "candidates": k,
+                "rrf_k": RRF_K,
+                "k": k,
+            },
+        )
+    else:
+        rows = await session.execute(
+            chunk_search_query(society_id=society_id, query_embedding=query_embedding, k=k)
+        )
     return [
         {
-            "doc_id": document.doc_id,
-            "version": document.version,
-            "title": document.title,
-            "society_id": document.society_id,
-            "heading_path": chunk.heading_path,
-            "content": chunk.content,
-            "similarity": round(float(similarity), 4),
+            "doc_id": row.doc_id,
+            "version": row.version,
+            "title": row.title,
+            "society_id": row.society_id,
+            "heading_path": row.heading_path,
+            "content": row.content,
+            "similarity": round(float(row.similarity), 4),
+            "keyword_match": bool(row.keyword_match),
         }
-        for chunk, document, similarity in rows
+        for row in rows
     ]

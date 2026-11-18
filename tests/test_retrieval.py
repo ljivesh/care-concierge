@@ -89,6 +89,74 @@ def test_society_and_version_filters_are_in_the_where_clause():
     assert sql.index("WHERE") < sql.index("ORDER BY") < sql.index("LIMIT")
 
 
+def test_hybrid_search_reads_only_from_the_filtered_set():
+    sql = " ".join(str(scoping.HYBRID_SEARCH_SQL).split())
+
+    # The filters are in the WHERE clause of `visible`...
+    visible = sql[sql.index("WITH visible AS (") : sql.index("dense AS (")]
+    assert "WHERE d.is_current IS TRUE AND (d.society_id = :society_id OR d.society_id IS NULL)" in visible
+    # ...and both searches take their chunks from `visible`, never from the table itself.
+    dense = sql[sql.index("dense AS (") : sql.index("terms AS (")]
+    keyword = sql[sql.index("term_weight AS (") : sql.index("keyword AS (")]
+    assert "FROM visible" in dense and "doc_chunks" not in dense
+    assert "visible v" in keyword and "doc_chunks" not in keyword
+    assert "FULL OUTER JOIN" in sql
+
+
+@pytest.mark.parametrize(
+    "query, society_id, document, fact",
+    [
+        # One row of a table in the directory: "HBA1C ... 24 hours".
+        ("HbA1c report time", "soc_royal", "department-directory", "| `HBA1C` | HbA1c (glycated haemoglobin) | Blood (EDTA) | No | 24 hours |"),
+        # One bullet in the Lotus Tower annex.
+        ("dietitian teleconsultation covered", "soc_lotus", "annex-lotus-tower", "**Dietitian teleconsultation:** 4 per resident per plan year are covered."),
+    ],
+)
+async def test_questions_dense_search_gets_wrong_and_hybrid_gets_right(
+    session_factory, embedder, query, society_id, document, fact
+):
+    (vector,) = await embedder.embed([query])
+
+    async with session_factory() as session:
+        dense = await scoping.search_chunks(session, society_id=society_id, query_embedding=vector, k=6)
+        hybrid = await scoping.search_chunks(
+            session, society_id=society_id, query_embedding=vector, k=6, query_text=query
+        )
+
+    assert not any(fact in p["content"] for p in dense)  # dense alone never surfaces the fact
+    found = next(p for p in hybrid if fact in p["content"])
+    assert found["doc_id"] == document and found["keyword_match"] is True
+
+
+@pytest.mark.parametrize("society_id", SOCIETIES)
+async def test_hybrid_search_never_returns_another_society_or_an_old_version(session_factory, embedder, society_id):
+    query = "wellness room hours Sunday home sample collection vitamin D covered"
+    (vector,) = await embedder.embed([query])
+
+    async with session_factory() as session:
+        found = await scoping.search_chunks(
+            session, society_id=society_id, query_embedding=vector, k=40, query_text=query
+        )
+
+    assert len(found) == 40
+    assert any(p["keyword_match"] for p in found) and not all(p["keyword_match"] for p in found)
+    assert {p["society_id"] for p in found} <= {society_id, None}
+    assert {p["version"] for p in found if p["doc_id"] == "plan-coverage"} <= {2}
+
+
+async def test_a_query_with_no_usable_words_still_works(session_factory, embedder):
+    # Hindi only: the English keyword search has nothing to match, dense search carries it.
+    query = "रविवार को वेलनेस रूम कब खुलता है"
+    (vector,) = await embedder.embed([query])
+
+    async with session_factory() as session:
+        found = await scoping.search_chunks(
+            session, society_id="soc_lotus", query_embedding=vector, k=6, query_text=query
+        )
+
+    assert found[0]["doc_id"] == "annex-lotus-tower"
+
+
 # ---------- society scoping: the immediate-no rule ----------
 
 
