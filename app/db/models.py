@@ -26,6 +26,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -35,6 +36,8 @@ UQ_SERVICE_REQUEST_ID = "uq_service_requests_request_id"
 UQ_SYMPTOM_REQUEST_ID = "uq_symptom_logs_request_id"
 UQ_ESCALATION_REQUEST_ID = "uq_escalations_request_id"
 CK_SEVERITY = "ck_symptom_logs_severity_1_to_5"
+
+EMBEDDING_DIM = 768  # must match app/embeddings.py and migration 0002
 
 
 class Base(DeclarativeBase):
@@ -197,11 +200,12 @@ class Document(Base):
     # False once a newer version replaced it; search only reads current rows.
     is_current: Mapped[bool] = mapped_column()
     source_path: Mapped[str] = mapped_column(Text)
+    # Hash of the file, so ingestion can tell when nothing changed and skip re-embedding.
+    source_sha256: Mapped[str] = mapped_column(Text)
 
 
 class DocChunk(Base):
-    """One heading-level section of a document. The embedding column is added
-    by a later migration, together with the pgvector extension."""
+    """One heading-level section of a document, with its embedding."""
 
     __tablename__ = "doc_chunks"
     __table_args__ = (
@@ -213,3 +217,4 @@ class DocChunk(Base):
     chunk_index: Mapped[int] = mapped_column(Integer)
     heading_path: Mapped[str] = mapped_column(Text)  # "Title > Section > Subsection"
     content: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))

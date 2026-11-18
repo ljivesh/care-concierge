@@ -16,8 +16,8 @@ TIMEOUT = 5.0
 
 
 @pytest.fixture
-def tools(session_factory):
-    return make_tools(session_factory)
+def tools(session_factory, embedder):
+    return make_tools(session_factory, embedder, min_similarity=0.36)
 
 
 async def count(session_factory, model) -> int:
@@ -60,6 +60,7 @@ def test_model_cannot_see_or_set_patient_id_and_request_id(tools):
         visible = convert_to_openai_tool(tool)["function"]["parameters"]["properties"]
         assert "patient_id" not in visible, tool.name
         assert "request_id" not in visible, tool.name
+        assert "society_id" not in visible, tool.name
 
 
 def test_contract_names_and_enum(tools):
@@ -67,6 +68,7 @@ def test_contract_names_and_enum(tools):
         "book_service",
         "list_service_requests",
         "log_symptom",
+        "search_clinic_docs",
         "escalate_emergency",
     ]
     schema = convert_to_openai_tool(tools[0])["function"]["parameters"]

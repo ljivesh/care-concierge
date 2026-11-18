@@ -1,7 +1,8 @@
 """Test setup: a separate, real Postgres database, built by the real migration.
 
 Every test run drops and recreates `<dbname>_test`, runs `alembic upgrade head`
-on it (so the migration is proven on an empty database each time) and seeds it.
+on it (so the migration is proven on an empty database each time), seeds it and
+ingests the corpus.
 """
 
 import asyncio
@@ -26,11 +27,27 @@ os.environ["DATABASE_URL"] = _main_url.set(database=TEST_DB).render_as_string(hi
 get_settings.cache_clear()
 
 from app.db.session import make_engine, make_session_factory  # noqa: E402
+from app.embeddings import Embedder  # noqa: E402
+from app.ingest import ingest  # noqa: E402
 from app.seed import main as seed_main  # noqa: E402
 
 
+@pytest.fixture(scope="session")
+def embedder() -> Embedder:
+    """The real local model, loaded once for the whole run."""
+    return Embedder()
+
+
+async def _ingest_corpus(embedder: Embedder) -> None:
+    engine = make_engine(get_settings())
+    try:
+        await ingest(make_session_factory(engine), embedder)
+    finally:
+        await engine.dispose()
+
+
 @pytest.fixture(scope="session", autouse=True)
-def _test_database():
+def _test_database(embedder):
     admin = create_engine(_main_url, isolation_level="AUTOCOMMIT")
     with admin.connect() as conn:
         conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DB}" WITH (FORCE)'))
@@ -39,6 +56,7 @@ def _test_database():
 
     command.upgrade(Config(str(ROOT / "alembic.ini")), "head")
     asyncio.run(seed_main())
+    asyncio.run(_ingest_corpus(embedder))
 
 
 @pytest.fixture

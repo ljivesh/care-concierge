@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     db_statement_timeout_ms: int = 5000
     tool_timeout_s: float = 10.0
 
+    # Passages scoring below this cosine similarity are not used as evidence.
+    retrieval_min_similarity: float = 0.36
+
     # Any OpenAI-compatible endpoint works (Groq, OpenAI, OpenRouter, Ollama...).
     llm_provider: str = "groq"
     llm_base_url: str = "https://api.groq.com/openai/v1"

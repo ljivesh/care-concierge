@@ -13,8 +13,6 @@ Three ideas in this file:
 3. `run_tool` is the only way a tool gets called. It adds the timeout and
    turns every kind of failure into the same {"error": {...}} shape, so one
    broken tool call can never crash a turn.
-
-(`search_clinic_docs` is added with retrieval.)
 """
 
 import asyncio
@@ -30,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app import booking, records, scoping
 from app.booking import BookingStatus
 from app.contract import Service
+from app.embeddings import Embedder
 from app.errors import ConciergeError, ErrorCode
 
 log = logging.getLogger("concierge.tools")
@@ -38,6 +37,8 @@ log = logging.getLogger("concierge.tools")
 
 PatientId = Annotated[str, InjectedToolArg]
 RequestId = Annotated[uuid.UUID, InjectedToolArg]
+# Also hidden from the model: which society's documents may be searched is not its choice.
+SocietyId = Annotated[str, InjectedToolArg]
 
 
 class BookServiceArgs(BaseModel):
@@ -82,11 +83,22 @@ class EscalateEmergencyArgs(BaseModel):
     request_id: RequestId
 
 
+class SearchClinicDocsArgs(BaseModel):
+    query: str = Field(
+        min_length=1,
+        description="What the patient wants to know about the clinic, as a short search query in English.",
+    )
+    society_id: SocietyId
+    k: int = Field(default=6, ge=1, le=10, description="How many passages to return.")
+
+
 # ---------- the tools ----------
 
 
-def make_tools(session_factory: async_sessionmaker[AsyncSession]) -> list[BaseTool]:
-    """Build the tools around a session factory. A function, not module-level
+def make_tools(
+    session_factory: async_sessionmaker[AsyncSession], embedder: Embedder, *, min_similarity: float
+) -> list[BaseTool]:
+    """Build the tools around their dependencies. A function, not module-level
     objects, so nothing global is shared and tests can pass their own database."""
 
     async def book_service(
@@ -127,6 +139,16 @@ def make_tools(session_factory: async_sessionmaker[AsyncSession]) -> list[BaseTo
             session_factory, patient_id=patient_id, transcript=transcript, request_id=request_id
         )
 
+    async def search_clinic_docs(query: str, society_id: str, k: int = 6) -> list[dict]:
+        (query_embedding,) = await embedder.embed([query])
+        async with session_factory() as session:
+            passages = await scoping.search_chunks(
+                session, society_id=society_id, query_embedding=query_embedding, k=k
+            )
+        # Abstention: passages below the threshold are not evidence. An empty
+        # list tells the agent to say it does not know and offer a nurse.
+        return [p for p in passages if p["similarity"] >= min_similarity]
+
     return [
         StructuredTool.from_function(
             coroutine=book_service,
@@ -145,6 +167,15 @@ def make_tools(session_factory: async_sessionmaker[AsyncSession]) -> list[BaseTo
             name="log_symptom",
             description="Record a symptom the patient wants the care team to know about.",
             args_schema=LogSymptomArgs,
+        ),
+        StructuredTool.from_function(
+            coroutine=search_clinic_docs,
+            name="search_clinic_docs",
+            description=(
+                "Search MicroHeal's published documents for the patient's society. The only source "
+                "for clinic questions (hours, coverage, fees, test preparation, policies)."
+            ),
+            args_schema=SearchClinicDocsArgs,
         ),
         StructuredTool.from_function(
             coroutine=escalate_emergency,

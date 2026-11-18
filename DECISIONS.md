@@ -4,22 +4,25 @@ Each record names what was chosen, the option rejected, and what the choice cost
 
 ## 1. Embeddings run locally, inside the app
 
-**Chosen:** a small multilingual embedding model loaded in the app process and run on CPU.
-The same model embeds document chunks at ingest and the patient's question at query time;
-vectors are stored in pgvector on `doc_chunks`. Exact model and library are confirmed in the
-retrieval step, after testing on the Hindi questions.
+**Chosen:** `paraphrase-multilingual-mpnet-base-v2` (768 dimensions), run on CPU inside the app
+through ONNX (the fastembed library). The same model embeds document chunks at ingest and the
+patient's question at query time; vectors are stored in pgvector on `doc_chunks`.
 
-**Rejected:** a hosted embeddings API (OpenAI or similar).
+**Rejected:** a hosted embeddings API (OpenAI or similar). Also rejected, after trying them on
+20 English, Hindi and Hinglish questions: `paraphrase-multilingual-MiniLM-L12-v2` (0.2 GB, but
+the right passage was top-ranked for only 8 of 14 answerable questions against 11 of 14) and
+`multilingual-e5-large` (2.2 GB, two minutes to embed the corpus on CPU, and its scores all
+sit between 0.74 and 0.90, so a similarity threshold cannot separate anything).
 
 **Why:** `make eval` must run with no API key, and retrieval is part of the eval. The LLM
-provider (Groq) has no embeddings endpoint to reuse. The corpus is about 100 chunks, so CPU
-speed is not a concern. Patients write Hindi and Hinglish against mostly English documents,
-so the model has to be multilingual.
+provider (Groq) has no embeddings endpoint to reuse. Patients write Hindi and Hinglish against
+mostly English documents, so the model has to be multilingual.
 
-**Cost:** a larger Docker image and slower first build, because the weights are baked in.
-A small local model is weaker than a large hosted one, so cross-language matches (a Hindi
-question against an English passage) are the most likely retrieval misses. Changing the model
-later means re-embedding every chunk and re-picking the similarity threshold.
+**Cost:** the weights are baked into the Docker image, which adds about 1 GB and makes the
+first build slower. Embedding the 78 chunks takes about 20 seconds on CPU, paid once at first
+start and on every test run. Hinglish is the weak spot: Hinglish questions score lower than
+English ones, close to off-topic questions, which limits how well a threshold can abstain.
+The vector size is in the schema, so changing the model means a migration and re-embedding.
 
 ## 2. Groq as the LLM provider, switchable from the env file
 
