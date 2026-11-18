@@ -7,13 +7,16 @@
 //
 //   token        -> text-start / text-delta
 //   tool_call    -> tool-input-available
-//   tool_result  -> tool-output-available | tool-output-error
+//   tool_result  -> tool-output-available   (a failed call too: its result
+//                                            carries the message and free slots)
 //   citation     -> source-document
 //   final        -> text-end, finish
 //   error        -> error
 
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
-import { citationLabel, streamChat, toolErrorText, type ChatRequest } from "./concierge-api";
+import { streamChat } from "@/lib/api/concierge-api";
+import { citationPart } from "@/lib/helpers/transcript";
+import type { ChatRequest } from "@/lib/types/concierge";
 
 function textOf(message: UIMessage): string {
   return message.parts.map((part) => (part.type === "text" ? part.text : "")).join("");
@@ -53,30 +56,15 @@ function toChunks(request: ChatRequest, signal?: AbortSignal): ReadableStream<UI
               });
               break;
             case "tool_result":
-              if (event.data.status === "success") {
-                controller.enqueue({
-                  type: "tool-output-available",
-                  toolCallId: event.data.id,
-                  output: event.data.result,
-                  dynamic: true,
-                });
-              } else {
-                controller.enqueue({
-                  type: "tool-output-error",
-                  toolCallId: event.data.id,
-                  errorText: toolErrorText(event.data.result),
-                  dynamic: true,
-                });
-              }
+              controller.enqueue({
+                type: "tool-output-available",
+                toolCallId: event.data.id,
+                output: event.data.result,
+                dynamic: true,
+              });
               break;
             case "citation":
-              controller.enqueue({
-                type: "source-document",
-                sourceId: String(event.data.n),
-                mediaType: "text/markdown",
-                title: citationLabel(event.data),
-                filename: event.data.doc_id,
-              });
+              controller.enqueue(citationPart(event.data));
               break;
             case "final":
               closeText();

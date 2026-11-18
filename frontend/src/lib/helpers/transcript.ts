@@ -2,9 +2,20 @@
 // so a reloaded conversation renders exactly like a live one.
 
 import type { UIMessage } from "ai";
-import { citationLabel, toolErrorText, type Transcript } from "./concierge-api";
+import type { Citation, Transcript } from "@/lib/types/concierge";
 
 type Part = UIMessage["parts"][number];
+
+/** A citation as an AI SDK part. The heading path travels in `title`. */
+export function citationPart(citation: Citation) {
+  return {
+    type: "source-document" as const,
+    sourceId: String(citation.n),
+    mediaType: "text/markdown",
+    title: citation.heading_path,
+    filename: citation.doc_id,
+  };
+}
 
 export function messagesFromTranscript(transcript: Transcript): UIMessage[] {
   const messages: UIMessage[] = [];
@@ -31,26 +42,23 @@ export function messagesFromTranscript(transcript: Transcript): UIMessage[] {
       });
     } else {
       // Fill in the result on the call it belongs to.
-      reply = reply.map((part): Part => {
-        if (part.type !== "dynamic-tool" || part.toolCallId !== entry.id) return part;
-        const call = { type: part.type, toolCallId: part.toolCallId, toolName: part.toolName, input: part.input };
-        return entry.status === "success"
-          ? { ...call, state: "output-available", output: entry.result }
-          : { ...call, state: "output-error", errorText: toolErrorText(entry.result) };
-      });
+      reply = reply.map((part): Part =>
+        part.type === "dynamic-tool" && part.toolCallId === entry.id
+          ? {
+              type: "dynamic-tool",
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              input: part.input,
+              state: "output-available",
+              output: entry.result,
+            }
+          : part,
+      );
     }
   }
 
   // The server keeps citations for the most recent reply only.
-  for (const citation of transcript.citations) {
-    reply.push({
-      type: "source-document",
-      sourceId: String(citation.n),
-      mediaType: "text/markdown",
-      title: citationLabel(citation),
-      filename: citation.doc_id,
-    });
-  }
+  reply.push(...transcript.citations.map(citationPart));
   closeReply();
   return messages;
 }
