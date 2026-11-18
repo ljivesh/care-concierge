@@ -116,7 +116,8 @@ def make_router_node(deps: Deps):
 
         intents = [intent.value for intent in route.intents]
         update: dict = {"intents": intents}
-        if Intent.CLINIC_INFO.value in intents and route.search_query:
+        careful_path = {Intent.EMERGENCY.value, Intent.MEDICAL_ADVICE.value} & set(intents)
+        if Intent.CLINIC_INFO.value in intents and route.search_query and not careful_path:
             # A clinic question always gets a search: we queue the tool call here,
             # so the model cannot skip it and answer from memory.
             update["messages"] = [
@@ -186,8 +187,15 @@ def make_respond_node(deps: Deps):
 
         if reply.tool_calls:
             return {"messages": [reply]}
+
+        text = str(reply.content).strip()
+        if respond.NO_ANSWER in text:
+            # The model judged that the passages do not answer the question: abstain
+            # with the fixed reply. Same id, so it replaces the model's message.
+            return {"messages": [AIMessage(replies.dont_know(Language(state["language"])), id=reply.id)]}
+        reply = AIMessage(text, id=reply.id)
         citations = _cited(
-            str(reply.content),
+            text,
             passages_this_turn(state["messages"]),
             is_clinic_answer=Intent.CLINIC_INFO.value in state["intents"],
         )

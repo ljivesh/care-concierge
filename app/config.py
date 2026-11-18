@@ -22,10 +22,12 @@ class Settings(BaseSettings):
     max_tool_calls_per_turn: int = 4
 
     # Passages scoring below this cosine similarity are not used as evidence.
-    retrieval_min_similarity: float = 0.36
+    # Low on purpose: it only removes clearly unrelated text. Whether the passages
+    # that remain actually answer the question is decided by the reply model.
+    retrieval_min_similarity: float = 0.30
 
     # Any OpenAI-compatible endpoint works. LLM_PROVIDER picks a known base URL
-    # (groq, openai, openrouter); LLM_BASE_URL overrides it for anything else.
+    # (cerebras, groq, openai, openrouter); LLM_BASE_URL overrides it for anything else.
     llm_provider: str = "groq"
     llm_base_url: str = ""
     llm_api_key: str = ""  # empty is valid: `make eval` must run without a key

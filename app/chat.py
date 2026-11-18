@@ -22,6 +22,7 @@ from collections.abc import AsyncIterator
 from langchain_core.messages import AIMessage, AIMessageChunk, AnyMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from app.graph.respond import NO_ANSWER
 from app.graph.state import this_turn
 
 log = logging.getLogger("concierge.chat")
@@ -65,6 +66,7 @@ async def stream_turn(
 ) -> AsyncIterator[str]:
     config = {"configurable": {"thread_id": thread_id}}
     streamed = ""  # reply text already sent as tokens
+    held = ""  # text held back while it could still turn out to be the NO_ANSWER marker
     try:
         before = await graph.aget_state(config)
         seen_before = before.values.get("request_id") == request_id
@@ -83,12 +85,18 @@ async def stream_turn(
                     piece, meta = chunk
                     # Only the reply-writing model's text; the safety and router calls stay private.
                     if meta.get("langgraph_node") == "respond" and isinstance(piece, AIMessageChunk) and isinstance(piece.content, str) and piece.content:
-                        streamed += piece.content
-                        yield sse("token", {"text": piece.content})
+                        held += piece.content
+                        if not streamed:
+                            held = held.lstrip()  # models often open with blank lines
+                        if held and not NO_ANSWER.startswith(held.strip()):
+                            streamed += held
+                            yield sse("token", {"text": held})
+                            held = ""
                 else:
                     for node, update in chunk.items():
                         for message in (update or {}).get("messages", []):
                             for event in _tool_events(message):
+                                streamed = held = ""  # text before a tool call was not the reply
                                 yield event
                             if node in FIXED_REPLY_NODES and isinstance(message, AIMessage) and message.content:
                                 streamed += message.content
@@ -96,7 +104,7 @@ async def stream_turn(
 
         state = (await graph.aget_state(config)).values
         reply = str(state["messages"][-1].content)
-        if streamed != reply:
+        if streamed.strip() != reply:
             # Nothing (or something else) was streamed: send the reply in one piece.
             yield sse("token", {"text": reply, "replace": True})
         for citation in state["citations"]:

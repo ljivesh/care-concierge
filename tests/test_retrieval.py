@@ -8,6 +8,7 @@ from app import scoping
 from app.corpus import chunk_by_headings, parse_document
 from app.db.models import DocChunk, Document
 from app.ingest import CORPUS_DIR, ingest
+from app.config import get_settings
 from app.tools import make_tools, run_tool
 
 SOCIETIES = ["soc_shivalik", "soc_lotus", "soc_royal"]
@@ -16,7 +17,7 @@ EVERYTHING = 500  # a k larger than the corpus: returns every chunk the society 
 
 @pytest.fixture
 def tools(session_factory, embedder):
-    return make_tools(session_factory, embedder, min_similarity=0.36)
+    return make_tools(session_factory, embedder, min_similarity=get_settings().retrieval_min_similarity)
 
 
 async def search(tools, query: str, society_id: str, k: int = 6) -> list[dict]:
@@ -164,7 +165,7 @@ async def test_every_passage_can_be_cited(tools):
 
 @pytest.mark.parametrize(
     "question",
-    ["Who won the cricket match yesterday?", "What is the visitor parking fee?", "Do you have a dentist?"],
+    ["Who won the cricket match yesterday?", "What is the wifi password?", "MRI scans available"],
 )
 async def test_question_outside_the_corpus_returns_no_evidence(tools, question):
     assert await search(tools, question, "soc_royal") == []

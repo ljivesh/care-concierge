@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from app import booking, records
 from app.db.models import Escalation, ServiceRequest, SymptomLog
 from app.errors import ConciergeError, ErrorCode
+from app.config import get_settings
 from app.tools import is_error, make_tools, run_tool
 
 TIMEOUT = 5.0
@@ -17,7 +18,7 @@ TIMEOUT = 5.0
 
 @pytest.fixture
 def tools(session_factory, embedder):
-    return make_tools(session_factory, embedder, min_similarity=0.36)
+    return make_tools(session_factory, embedder, min_similarity=get_settings().retrieval_min_similarity)
 
 
 async def count(session_factory, model) -> int:

@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from app.config import Settings
 
 PROVIDER_BASE_URLS = {
+    "cerebras": "https://api.cerebras.ai/v1",
     "groq": "https://api.groq.com/openai/v1",
     "openai": "https://api.openai.com/v1",
     "openrouter": "https://openrouter.ai/api/v1",

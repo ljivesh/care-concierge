@@ -19,9 +19,10 @@ Intents:
 - LIST_SERVICES: wants to see their own bookings or appointments.
 - LOG_SYMPTOM: is telling us a symptom so the care team knows, or giving its severity.
 - CLINIC_INFO: asks about the clinic or their plan: opening hours, what is covered, fees, which \
-doctors visit, how to prepare for a test, contacts, policies.
-- MEDICAL_ADVICE: asks for a diagnosis, a medicine, a dose, whether to change a medicine, what a \
-result means, or whether they need a test.
+doctors visit, what services, tests or packages are offered or can be bought, how to prepare for a \
+test, contacts, policies. Asking what the clinic offers or recommends buying is CLINIC_INFO.
+- MEDICAL_ADVICE: asks for a medical judgement about a person: a diagnosis, a medicine, a dose, \
+whether to change a medicine, what a result means, or whether their symptoms need a test or treatment.
 - EMERGENCY: describes something happening now that may need urgent medical help.
 - SMALL_TALK: greeting, thanks, goodbye, chit-chat.
 - UNKNOWN: unclear, or something the concierge does not do (for example cancelling or \

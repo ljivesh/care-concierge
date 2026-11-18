@@ -34,7 +34,7 @@ from app.tools import make_tools
 def deps(session_factory, embedder):
     return Deps(
         llm=object(),  # never used: every model call is replaced
-        tools=make_tools(session_factory, embedder, min_similarity=0.36),
+        tools=make_tools(session_factory, embedder, min_similarity=get_settings().retrieval_min_similarity),
         settings=get_settings().model_copy(update={"safety_timeout_s": 0.3}),
     )
 
@@ -229,7 +229,7 @@ async def test_booking_continues_after_a_restart_without_asking_twice(session_fa
     settings = get_settings()
 
     def fresh_deps():
-        return Deps(llm=object(), tools=make_tools(session_factory, embedder, min_similarity=0.36), settings=settings)
+        return Deps(llm=object(), tools=make_tools(session_factory, embedder, min_similarity=get_settings().retrieval_min_similarity), settings=settings)
 
     # First process: the patient asks to book but gives no date.
     async with open_checkpointer(settings) as first_saver:
@@ -384,3 +384,27 @@ async def test_question_outside_the_corpus_gets_the_fixed_dont_know_reply(deps, 
     assert reply_text(state) == replies.dont_know(Language.EN)
     assert "nurse" in reply_text(state)
     assert state["citations"] == []
+
+
+async def test_model_says_the_passages_do_not_answer_and_the_patient_gets_the_fixed_reply(deps, checkpointer, monkeypatch):
+    async def passages_do_not_answer(llm, tools, messages):
+        return AIMessage(f"\n\n{respond.NO_ANSWER}")
+
+    # In-domain wording, so search does return passages; none of them is about a gym.
+    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_query="gym timings", reply=passages_do_not_answer)
+
+    state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "gym ka timing kya hai", language="hinglish")
+
+    assert reply_text(state) == replies.dont_know(Language.EN)  # the scripted safety check reports English
+    assert state["citations"] == []
+    assert respond.NO_ANSWER not in "".join(str(m.content) for m in state["messages"])
+
+
+async def test_medical_intent_from_the_router_does_not_leave_a_search_behind(deps, checkpointer, monkeypatch, tool_runs):
+    script(monkeypatch, intents=[Intent.MEDICAL_ADVICE, Intent.CLINIC_INFO], search_query="paracetamol dose")
+
+    state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "how much paracetamol is covered and safe")
+
+    assert reply_text(state) == replies.medical_advice(Language.EN)
+    assert tool_runs == []
+    assert not any(isinstance(m, AIMessage) and m.tool_calls for m in state["messages"])
