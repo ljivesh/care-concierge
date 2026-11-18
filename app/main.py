@@ -65,7 +65,8 @@ async def page() -> FileResponse:
     index = FRONTEND_DIR / "index.html"
     if not index.exists():
         raise HTTPException(503, "The frontend has not been built. Run `docker compose up --build`.")
-    return FileResponse(index)
+    # The page itself is never cached; the JS and CSS it points to have hashed names and can be.
+    return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
 @app.post("/v1/chat")
