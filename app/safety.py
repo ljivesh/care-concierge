@@ -98,12 +98,24 @@ async def ask_model(llm: BaseChatModel, message: str) -> SafetyDecision:
     return decision
 
 
+async def _ask_with_one_retry(llm: BaseChatModel, message: str) -> SafetyDecision:
+    """Smaller models sometimes garble a structured answer; one more try usually fixes it."""
+    try:
+        return await ask_model(llm, message)
+    except Exception as exc:
+        log.warning("safety_classifier_retry error=%s", type(exc).__name__)
+        return await ask_model(llm, message)
+
+
 async def classify(
     llm: BaseChatModel, message: str, *, timeout_s: float, fallback_language: Language
 ) -> SafetyOutcome:
-    """Label one message. Never raises: a failure comes back as an outcome with no verdict."""
+    """Label one message. Never raises: a failure comes back as an outcome with no verdict.
+
+    `timeout_s` covers everything, including the retry and any rate-limit wait.
+    """
     try:
-        decision = await asyncio.wait_for(ask_model(llm, message), timeout=timeout_s)
+        decision = await asyncio.wait_for(_ask_with_one_retry(llm, message), timeout=timeout_s)
     except asyncio.TimeoutError:
         log.error("safety_classifier_failed kind=timeout timeout_s=%s", timeout_s)
     except Exception as exc:

@@ -31,5 +31,5 @@ def make_llm(settings: Settings) -> ChatOpenAI:
         base_url=base_url,
         temperature=0,
         timeout=settings.llm_timeout_s,  # every LLM call has a timeout
-        max_retries=1,
+        max_retries=2,  # the client waits and retries when the provider rate-limits (HTTP 429)
     )

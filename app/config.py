@@ -27,8 +27,9 @@ class Settings(BaseSettings):
     llm_api_key: str = ""  # empty is valid: `make eval` must run without a key
     llm_model: str = ""
     llm_timeout_s: float = 30.0
-    # The safety check runs before everything else, so it gets a tighter limit.
-    safety_timeout_s: float = 8.0
+    # Total budget for the safety check, including one retry and any rate-limit
+    # wait. Groq's free tier (8,000 tokens a minute) can make a call wait 7 seconds.
+    safety_timeout_s: float = 20.0
 
 
 @lru_cache

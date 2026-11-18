@@ -62,6 +62,25 @@ async def test_classifier_raises_fails_closed_and_is_logged(monkeypatch, caplog)
     assert failures_logged(caplog) == ["safety_classifier_failed kind=error error=ConnectionError"]
 
 
+async def test_one_garbled_answer_is_retried_and_does_not_fail(monkeypatch, caplog):
+    calls = []
+
+    async def garbled_once(llm, message):
+        calls.append(message)
+        if len(calls) == 1:
+            raise ValueError("tool call validation failed")
+        return SafetyDecision(verdict=SafetyVerdict.EMERGENCY, language=Language.EN)
+
+    monkeypatch.setattr(safety, "ask_model", garbled_once)
+
+    with caplog.at_level(logging.ERROR, logger="concierge.safety"):
+        outcome = await classify(LLM, "he is not breathing", timeout_s=1, fallback_language=Language.EN)
+
+    assert outcome.verdict == SafetyVerdict.EMERGENCY
+    assert len(calls) == 2
+    assert failures_logged(caplog) == []
+
+
 async def test_classifier_times_out_fails_closed_and_is_logged(monkeypatch, caplog):
     async def hangs(llm, message):
         await asyncio.sleep(30)

@@ -68,8 +68,8 @@ test at the same slot is rejected like any other double booking; that is a known
 
 ## 4. When the safety classifier fails, we fail closed
 
-**Chosen:** fail closed. If the classifier times out (8 seconds), the provider errors, or its
-answer is not one of the three verdicts, `safety.classify` returns an outcome with no verdict.
+**Chosen:** fail closed. If the classifier times out (20 seconds, covering one retry), the
+provider errors twice, or its answer is not one of the three verdicts, `safety.classify` returns an outcome with no verdict.
 The message is not routed, no tool runs, and the patient gets a fixed, hand-written reply in
 their language: we cannot process this right now; if it is an emergency call 112 or the
 hospital emergency desk; otherwise try again or call the wellness room for a nurse. Each
