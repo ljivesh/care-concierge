@@ -1,4 +1,4 @@
-"""The LangChain tools, with the names and arguments fixed by the contract.
+"""The LangChain tools: the five fixed by the contract, plus find_available_slots.
 
 Three ideas in this file:
 
@@ -18,7 +18,7 @@ Three ideas in this file:
 import asyncio
 import logging
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any
 
 from langchain_core.tools import BaseTool, InjectedToolArg, StructuredTool
@@ -59,6 +59,19 @@ class BookServiceArgs(BaseModel):
         )
     )
     request_id: RequestId
+
+
+class FindAvailableSlotsArgs(BaseModel):
+    """Not one of the five contract tools. Added so the concierge can show free slots
+    instead of making the patient guess a time (see README, "Beyond the brief")."""
+
+    patient_id: PatientId
+    service: Service = Field(description="DOCTOR for a consultation or physiotherapy, LAB for a lab test.")
+    subtype: str = Field(description="Department or test code, the same codes as book_service.")
+    start: date | None = Field(
+        default=None,
+        description="First day to look at, as YYYY-MM-DD. Leave empty to start from today.",
+    )
 
 
 class ListServiceRequestsArgs(BaseModel):
@@ -113,6 +126,13 @@ def make_tools(
             request_id=request_id,
         )
 
+    async def find_available_slots(
+        patient_id: str, service: Service, subtype: str, start: date | None = None
+    ) -> list[dict]:
+        return await booking.available_slots(
+            session_factory, patient_id=patient_id, service=service, subtype=subtype, start=start
+        )
+
     async def list_service_requests(patient_id: str, status: BookingStatus | None = None) -> list[dict]:
         async with session_factory() as session:
             patient = await scoping.get_patient(session, patient_id)
@@ -155,6 +175,15 @@ def make_tools(
             name="book_service",
             description="Book a doctor consultation or a lab test for the patient at a slot start time.",
             args_schema=BookServiceArgs,
+        ),
+        StructuredTool.from_function(
+            coroutine=find_available_slots,
+            name="find_available_slots",
+            description=(
+                "List upcoming free slots for a department or test at the patient's society. "
+                "Read-only. Use it when the patient asks what times are available."
+            ),
+            args_schema=FindAvailableSlotsArgs,
         ),
         StructuredTool.from_function(
             coroutine=list_service_requests,

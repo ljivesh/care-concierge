@@ -197,3 +197,62 @@ async def test_cancelled_booking_frees_the_slot(session_factory):
     booking = await book(session_factory, **cardiology("pat_002"))
 
     assert booking["patient_id"] == "pat_002"
+
+
+# ---------- free slots ----------
+
+from app.booking import available_slots  # noqa: E402
+
+MONDAY_NOON = datetime(2027, 1, 11, 12, 0, tzinfo=IST)
+
+
+async def slots_for(session_factory, patient_id="pat_001", subtype="CARDIOLOGY", service=Service.DOCTOR, **kwargs):
+    return await available_slots(
+        session_factory, patient_id=patient_id, service=service, subtype=subtype, now=MONDAY_NOON, **kwargs
+    )
+
+
+async def test_free_slots_are_the_patients_societys_grid_soonest_first(session_factory):
+    shivalik = await slots_for(session_factory)  # Dr. Khanna, Tuesdays 10:00 and 10:30
+    lotus = await slots_for(session_factory, patient_id="pat_010")  # Dr. Kapoor, Wednesdays 11:00 and 11:30
+
+    assert [s["scheduled_for"] for s in shivalik][:3] == [
+        "2027-01-12T10:00:00+05:30",
+        "2027-01-12T10:30:00+05:30",
+        "2027-01-19T10:00:00+05:30",
+    ]
+    assert {s["clinician_name"] for s in shivalik} == {"Dr. Arvind Khanna"}
+    assert lotus[0]["scheduled_for"] == "2027-01-13T11:00:00+05:30"
+    assert {s["clinician_name"] for s in lotus} == {"Dr. Neha Kapoor"}
+
+
+async def test_a_booked_slot_is_not_offered(session_factory):
+    await book(session_factory, **cardiology("pat_002"))  # takes Tuesday 10:30
+
+    slots = await slots_for(session_factory)
+
+    assert "2027-01-12T10:30:00+05:30" not in [s["scheduled_for"] for s in slots]
+    assert slots[0]["scheduled_for"] == "2027-01-12T10:00:00+05:30"
+
+
+async def test_slots_in_the_past_are_not_offered(session_factory):
+    after_the_first_slot = datetime(2027, 1, 12, 10, 5, tzinfo=IST)
+
+    slots = await available_slots(
+        session_factory, patient_id="pat_001", service=Service.DOCTOR, subtype="CARDIOLOGY", now=after_the_first_slot
+    )
+
+    assert slots[0]["scheduled_for"] == "2027-01-12T10:30:00+05:30"
+
+
+async def test_free_slots_can_start_from_a_later_day(session_factory):
+    slots = await slots_for(session_factory, start=date(2027, 1, 18))
+
+    assert slots[0]["scheduled_for"] == "2027-01-19T10:00:00+05:30"
+
+
+async def test_free_slots_for_something_not_offered_is_refused(session_factory):
+    with pytest.raises(ConciergeError) as refused:
+        await slots_for(session_factory, patient_id="pat_010", subtype="PHYSIOTHERAPY")
+
+    assert refused.value.code == ErrorCode.NOT_OFFERED_AT_SOCIETY

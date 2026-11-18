@@ -62,3 +62,6 @@ export const isEscalation = (value: unknown): value is Escalation =>
 
 export const isPassageList = (value: unknown): value is Passage[] =>
   Array.isArray(value) && value.every((item) => isRecord(item) && typeof item.heading_path === "string");
+
+export const isSlotList = (value: unknown): value is SlotSuggestion[] =>
+  Array.isArray(value) && value.every((item) => isRecord(item) && typeof item.label === "string");

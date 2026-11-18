@@ -43,7 +43,12 @@ log = logging.getLogger("concierge.graph")
 # only the escalate node calls that.
 TOOLS_FOR_INTENT = {
     # Search is included so "when does the cardiologist visit?" can be answered mid-booking.
-    Intent.BOOK_SERVICE.value: {"book_service", "list_service_requests", "search_clinic_docs"},
+    Intent.BOOK_SERVICE.value: {
+        "book_service",
+        "find_available_slots",
+        "list_service_requests",
+        "search_clinic_docs",
+    },
     Intent.LIST_SERVICES.value: {"list_service_requests"},
     Intent.LOG_SYMPTOM.value: {"log_symptom"},
     Intent.CLINIC_INFO.value: {"search_clinic_docs"},

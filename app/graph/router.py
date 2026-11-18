@@ -15,7 +15,8 @@ understand it: if the assistant just asked for a date, a time or a severity and 
 answering, the intent is the one that question belongs to.
 
 Intents:
-- BOOK_SERVICE: wants to book a doctor consultation or a lab test, or is giving details for one.
+- BOOK_SERVICE: wants to book a doctor consultation or a lab test, is giving details for one, \
+or asks which slots or times are free for one.
 - LIST_SERVICES: wants to see their own bookings or appointments.
 - LOG_SYMPTOM: is telling us a symptom so the care team knows, or giving its severity.
 - CLINIC_INFO: asks about the clinic or their plan: opening hours, what is covered, fees, which \

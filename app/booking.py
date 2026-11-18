@@ -23,6 +23,8 @@ from app.db.models import UQ_ACTIVE_SLOT, Clinician, ServiceRequest, Society
 WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]  # date.weekday() order
 SUGGESTION_DAYS = 14  # how far ahead to look for free slots to offer
 SUGGESTION_LIMIT = 3
+SLOT_LIST_DAYS = 14  # how far ahead find_available_slots looks
+SLOT_LIST_LIMIT = 12
 
 
 class BookingStatus(str, Enum):
@@ -93,16 +95,84 @@ async def _free_slots_near(
     )
     free = [slot for slot in grid if slot not in taken and slot != wanted]
     nearest = sorted(free, key=lambda slot: abs(slot - wanted))[:SUGGESTION_LIMIT]
-    return [
-        {"clinician_name": clinician.name, "scheduled_for": slot.isoformat(), "label": _fmt(slot)}
-        for slot in sorted(nearest)
-    ]
+    return [_slot(clinician, slot) for slot in sorted(nearest)]
 
 
 def _with_suggestions(sentence: str, suggestions: list[dict]) -> str:
     if not suggestions:
         return sentence
     return f"{sentence} Nearest free slots: {'; '.join(s['label'] for s in suggestions)}."
+
+
+async def _clinicians_or_refuse(
+    session: AsyncSession, society: Society, service: Service, subtype: str
+) -> list[Clinician]:
+    """The clinicians who can do this at the patient's society, or a clear refusal."""
+    if not await _subtype_exists(session, service, subtype):
+        raise ConciergeError(
+            ErrorCode.UNKNOWN_SUBTYPE, f"'{subtype}' is not a {service.value} service we know."
+        )
+    clinicians = await scoping.clinicians_offering(
+        session, society_id=society.id, service=service, subtype=subtype
+    )
+    if not clinicians:
+        raise ConciergeError(
+            ErrorCode.NOT_OFFERED_AT_SOCIETY, f"{subtype} is not offered at {society.name}."
+        )
+    return clinicians
+
+
+def _slot(clinician: Clinician, when: datetime) -> dict:
+    return {"clinician_name": clinician.name, "scheduled_for": when.isoformat(), "label": _fmt(when)}
+
+
+# ---------- free slots (read only) ----------
+
+
+async def available_slots(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    patient_id: str,
+    service: Service,
+    subtype: str,
+    start: date | None = None,
+    now: datetime | None = None,
+) -> list[dict]:
+    """Upcoming free slots for a department or test at the patient's society, soonest first.
+
+    Looks SLOT_LIST_DAYS ahead from `start` (today if not given) and never offers a slot in the past.
+    """
+    async with session_factory() as session:
+        patient = await scoping.get_patient(session, patient_id)
+        if patient is None:
+            raise ConciergeError(ErrorCode.PATIENT_NOT_FOUND, "We could not find that patient.")
+        society = await session.get(Society, patient.society_id)
+        tz = ZoneInfo(society.timezone)
+        clinicians = await _clinicians_or_refuse(session, society, service, subtype)
+
+        now = (now or datetime.now(tz)).astimezone(tz)
+        first_day = max(start or now.date(), now.date())
+        free: list[tuple[datetime, Clinician]] = []
+        for clinician in clinicians:
+            grid = [
+                slot
+                for offset in range(SLOT_LIST_DAYS)
+                for slot in slots_on(clinician, society.id, first_day + timedelta(days=offset), tz)
+                if slot > now
+            ]
+            if not grid:
+                continue
+            taken = await scoping.booked_times(
+                session,
+                society_id=society.id,
+                clinician_id=clinician.id,
+                start=grid[0],
+                end=grid[-1] + timedelta(minutes=1),
+            )
+            free += [(slot, clinician) for slot in grid if slot not in taken]
+
+    free.sort(key=lambda pair: pair[0])
+    return [_slot(clinician, when) for when, clinician in free[:SLOT_LIST_LIMIT]]
 
 
 # ---------- the booking itself ----------
@@ -143,20 +213,7 @@ async def book(
             else scheduled_for.astimezone(tz)
         )
 
-        if not await _subtype_exists(session, service, subtype):
-            raise ConciergeError(
-                ErrorCode.UNKNOWN_SUBTYPE,
-                f"'{subtype}' is not a {service.value} service we know.",
-            )
-
-        clinicians = await scoping.clinicians_offering(
-            session, society_id=society_id, service=service, subtype=subtype
-        )
-        if not clinicians:
-            raise ConciergeError(
-                ErrorCode.NOT_OFFERED_AT_SOCIETY,
-                f"{subtype} is not offered at {society.name}.",
-            )
+        clinicians = await _clinicians_or_refuse(session, society, service, subtype)
 
         # Keep only clinicians for whom the requested time is a real slot start.
         on_grid = [c for c in clinicians if wanted in slots_on(c, society_id, wanted.date(), tz)]

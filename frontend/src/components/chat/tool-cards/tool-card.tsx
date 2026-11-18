@@ -2,6 +2,7 @@ import type { DynamicToolUIPart } from "ai";
 import { BookingCard, BookingsListCard } from "@/components/chat/tool-cards/booking-card";
 import { EscalationCard } from "@/components/chat/tool-cards/escalation-card";
 import { SearchCard } from "@/components/chat/tool-cards/search-card";
+import { SlotsCard } from "@/components/chat/tool-cards/slots-card";
 import { SymptomCard } from "@/components/chat/tool-cards/symptom-card";
 import { ToolDetails } from "@/components/chat/tool-cards/tool-details";
 import { ToolErrorCard } from "@/components/chat/tool-cards/tool-error-card";
@@ -11,12 +12,14 @@ import {
   isBookingList,
   isEscalation,
   isPassageList,
+  isSlotList,
   isSymptomLog,
   isToolError,
 } from "@/lib/types/tools";
 
 const RUNNING_LABEL: Record<string, string> = {
   book_service: "Booking your appointment",
+  find_available_slots: "Checking free slots",
   list_service_requests: "Looking up your bookings",
   log_symptom: "Noting your symptom",
   search_clinic_docs: "Searching the clinic documents",
@@ -34,6 +37,9 @@ function ToolResult({ part, onSuggest }: Props) {
   const { output } = part;
   if (isToolError(output)) return <ToolErrorCard error={output.error} onSuggest={onSuggest} />;
   if (part.toolName === "search_clinic_docs" && isPassageList(output)) return <SearchCard passages={output} />;
+  if (part.toolName === "find_available_slots" && isSlotList(output)) {
+    return <SlotsCard onSuggest={onSuggest} slots={output} />;
+  }
   if (isEscalation(output)) return <EscalationCard escalation={output} />;
   if (isBookingList(output)) return <BookingsListCard bookings={output} />;
   if (isBooking(output)) return <BookingCard booking={output} />;
