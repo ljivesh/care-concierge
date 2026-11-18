@@ -94,6 +94,29 @@ _SAFETY_UNAVAILABLE = {
     ),
 }
 
+# Abstention: search found nothing good enough, so we do not answer from memory.
+_DONT_KNOW = {
+    Language.EN: (
+        "I don't have that information in the clinic's documents, so I can't answer it. "
+        "Would you like to speak to a nurse? You can reach one through your wellness room."
+    ),
+    Language.HI: (
+        "यह जानकारी क्लिनिक के दस्तावेज़ों में नहीं है, इसलिए मैं इसका जवाब नहीं दे सकता। "
+        "क्या आप नर्स से बात करना चाहेंगे? आप अपने वेलनेस रूम के ज़रिए नर्स से बात कर सकते हैं।"
+    ),
+    Language.HINGLISH: (
+        "Yeh jaankari clinic ke documents mein nahi hai, isliye main iska jawab nahi de sakta. "
+        "Kya aap nurse se baat karna chahenge? Aap apne wellness room ke through nurse se baat kar sakte hain."
+    ),
+}
+
+# The model that writes replies failed after the safety check had passed.
+_TRY_AGAIN = {
+    Language.EN: "Sorry, something went wrong on our side. Please send that again, or call your wellness room.",
+    Language.HI: "क्षमा करें, हमारी तरफ़ से कुछ गड़बड़ हो गई। कृपया दोबारा भेजें, या अपने वेलनेस रूम पर कॉल करें।",
+    Language.HINGLISH: "Sorry, hamari taraf se kuch gadbad ho gayi. Please dobara bhejein, ya apne wellness room par call karein.",
+}
+
 
 def emergency(language: Language, *, hospital: str, phone: str, minutes: int) -> str:
     return _EMERGENCY[language].format(hospital=hospital, phone=phone, minutes=minutes)
@@ -109,3 +132,11 @@ def medical_advice(language: Language) -> str:
 
 def safety_unavailable(language: Language) -> str:
     return _SAFETY_UNAVAILABLE[language]
+
+
+def dont_know(language: Language) -> str:
+    return _DONT_KNOW[language]
+
+
+def try_again(language: Language) -> str:
+    return _TRY_AGAIN[language]

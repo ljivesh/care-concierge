@@ -20,6 +20,7 @@ class ErrorCode(str, Enum):
     INVALID_ARGUMENTS = "INVALID_ARGUMENTS"
     TOOL_TIMEOUT = "TOOL_TIMEOUT"
     TOOL_FAILED = "TOOL_FAILED"
+    TOOL_LIMIT = "TOOL_LIMIT"
 
 
 class ConciergeError(Exception):

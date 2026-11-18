@@ -26,6 +26,7 @@ TEST_DB = f"{_main_url.database}_test"
 os.environ["DATABASE_URL"] = _main_url.set(database=TEST_DB).render_as_string(hide_password=False)
 get_settings.cache_clear()
 
+from app.checkpoint import open_checkpointer  # noqa: E402
 from app.db.session import make_engine, make_session_factory  # noqa: E402
 from app.embeddings import Embedder  # noqa: E402
 from app.ingest import ingest  # noqa: E402
@@ -68,3 +69,10 @@ async def session_factory():
         await conn.execute(text("TRUNCATE service_requests, symptom_logs, escalations"))
     yield make_session_factory(engine)
     await engine.dispose()
+
+
+@pytest.fixture
+async def checkpointer():
+    """The real Postgres checkpointer, on the test database."""
+    async with open_checkpointer(get_settings()) as saver:
+        yield saver
