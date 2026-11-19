@@ -1,0 +1,39 @@
+# Production compose, used by the hosted deployment (Dokploy).
+# Differences from docker-compose.yml, which is the one for local use and grading:
+#   - no ports published on the host: the reverse proxy reaches the app on 8000
+#   - no source folder mounted and no auto-reload: the image's own code runs
+#   - the database password comes from the environment, not from this file
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: concierge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: concierge
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U concierge -d concierge"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://concierge:${POSTGRES_PASSWORD}@db:5432/concierge
+      LLM_PROVIDER: ${LLM_PROVIDER:-cerebras}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-qwen-3.8-27b}
+    expose:
+      - "8000"
+    # The Dockerfile's CMD migrates, seeds, ingests the corpus, then serves.
+
+volumes:
+  pgdata:
