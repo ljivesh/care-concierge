@@ -114,3 +114,48 @@ rewrite or on dense search. The candidate size was chosen on 22 queries that inc
 questions, so it may be fitted to them. And the similarity threshold now gates the whole result
 (is the closest passage relevant at all?) instead of each passage, because a keyword match can
 be the right passage with a low similarity of its own.
+
+## 6. Clinic answers are checked before they are shown
+
+**Chosen:** after the reply model writes an answer to a clinic question, a second model call
+(`app/graph/verify.py`) is given the question, the passages and the answer, and says whether
+the passages support it. If not, the patient gets the fixed "I don't have that information"
+reply. It fails closed: if the check cannot run, the answer is not shown and the patient is
+asked to send the message again. Because of this, a clinic answer is held back and sent in one
+piece once it has passed, instead of appearing word by word.
+
+**Rejected:** trusting the reply model's own judgement (the `NO_ANSWER` marker alone). Asked for
+the gym's hours and shown the wellness room's, it answered with the wellness room's hours and
+called them the gym's. Also rejected: a rule-based check, such as requiring the cited passage to
+share words with the question. It would decline correct answers whenever the wording differs
+("bone doctor" against "Orthopaedics"), and patients write in Hindi against English documents.
+
+**Why:** a confident wrong answer about hours, fees or coverage is the worst thing this feature
+can do, and the similarity threshold cannot stop it, because unanswerable questions about the
+clinic score as high as answerable ones (up to 0.60).
+
+**Cost:** one more model call on every clinic question, and no word-by-word streaming for those
+answers. A provider failure during the check costs the patient a good answer. And it is a model
+judging a model: it confirms the answer is supported by what was retrieved, so it cannot catch
+an answer that is wrong because the deciding passage was never retrieved.
+
+## 7. A booking is one visit, which can carry several tests
+
+**Chosen:** `service_requests.subtypes` is a list. A doctor consultation has one entry. A home
+collection can have several, because one visit by the phlebotomist covers every test booked for
+that morning. Booking a second test for a slot the patient already holds adds it to the same
+row with one atomic `UPDATE`; the result says `test_added`. The partial unique index is
+untouched: one active row per clinician and slot.
+
+**Rejected:** one row per test. To let a patient hold several rows in one slot, the unique index
+would have to become an exclusion constraint ("no two active rows in a slot with different
+patients"), which moves the double-booking rule away from the simple index it is now. One row
+per visit also matches what happens: the phlebotomist comes once.
+
+**Why:** the corpus says "one collection slot covers all tests booked for that morning", and
+"book CBC and lipid profile for tomorrow morning" is an ordinary thing to ask.
+
+**Cost:** a retried "add this test" request is recognised by its content (the test is already
+on the visit), not by its `request_id`, since the row keeps only the first request's id.
+Cancelling or rescheduling acts on the whole visit; one test cannot be removed on its own.
+

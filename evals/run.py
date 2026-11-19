@@ -178,7 +178,10 @@ async def ask_as_patient(row: dict, graph, session_factory, embedder) -> dict:
         "best_similarity": best,
         "cited": [c["doc_id"] for c in state["citations"]],
         "reply": reply,
-        "abstained": reply == replies.dont_know(Language(state["language"])),
+        # Declined: the fixed "I don't have that information" reply, or the fixed
+        # "please try again" reply sent when a model call failed. Neither is an answer.
+        "abstained": reply
+        in (replies.dont_know(Language(state["language"])), replies.try_again(Language(state["language"]))),
         "verdict": state["safety_verdict"],
         "intents": state["intents"],
     }

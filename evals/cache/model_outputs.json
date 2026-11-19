@@ -1,6 +1,22 @@
 {
  "model": "qwen-3.8-27b",
  "entries": {
+  "013070c39c62ae4dc37e279e": {
+   "kind": "respond",
+   "input": "kya thyroid test plan mein covered hai",
+   "output": {
+    "content": "\n\nHaan, Thyroid Profile (T3, T4, TSH) plan mein covered hai — har resident ke liye plan year mein ek baar [2]. Yeh 1 April 2026 se cover hua hai, pehle cover nahi tha [5]. Fasting ki zaroorat nahi hai, aur subah collect karna best hai [4].",
+    "tool_calls": []
+   }
+  },
+  "0151b9fa2085c62ddefd1ffc": {
+   "kind": "respond",
+   "input": "Do you have a pharmacy that delivers medicines?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
   "0162535030813614c56649ea": {
    "kind": "router",
    "input": "who won the cricket match yesterday",
@@ -8,7 +24,7 @@
     "intents": [
      "UNKNOWN"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "022a4dacbf568d5acee2d077": {
@@ -58,7 +74,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "health checkup packages available and recommended"
+    "search_queries": [
+     "health checkup packages available and recommended"
+    ]
    }
   },
   "08e41bee8ecd27adfc7ecc10": {
@@ -76,7 +94,7 @@
     "intents": [
      "LOG_SYMPTOM"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "0af63ec66ee91157c362cdac": {
@@ -87,6 +105,14 @@
     "language": "hi"
    }
   },
+  "0b9a46fdef291580723ad0bf": {
+   "kind": "respond",
+   "input": "Which days is home collection not available?",
+   "output": {
+    "content": "\n\nHome collection is not available on Saturdays or Sundays [1].",
+    "tool_calls": []
+   }
+  },
   "0c2f4a18ec01d77d1f6bd32b": {
    "kind": "router",
    "input": "What time does the wellness room open on Sunday?",
@@ -94,7 +120,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "wellness room opening hours Sunday"
+    "search_queries": [
+     "wellness room opening time on Sunday"
+    ]
    }
   },
   "0caaebe657875bd29fd09007": {
@@ -104,7 +132,7 @@
     "intents": [
      "SMALL_TALK"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "0cc8e69ac3a3f3c169623d40": {
@@ -114,7 +142,31 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "0d38dc30f7de08245c6fdbdc": {
+   "kind": "verify",
+   "input": "एम्बुलेंस किस गेट से आएगी?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states \"Ambulances enter through Gate 2 on the service road,\" which directly supports the answer."
+   }
+  },
+  "0df76513aa058db2c26958e6": {
+   "kind": "safety",
+   "input": "4",
+   "output": {
+    "verdict": "SAFE",
+    "language": "hi"
+   }
+  },
+  "0e11af9d6521f874db0330ea": {
+   "kind": "verify",
+   "input": "Is home sample collection free?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states that home sample collection costs ₹150 per visit and is free for residents aged 60 and over, which matches the answer exactly."
    }
   },
   "0e1f7cf9d0a73d6e5eafd4d3": {
@@ -124,7 +176,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "fasting required for sugar test"
+    "search_queries": [
+     "fasting required for sugar test"
+    ]
    }
   },
   "0fcccea0e5e192330591b4a2": {
@@ -143,6 +197,32 @@
     "tool_calls": []
    }
   },
+  "10f0c75a128cd434fbcb80f9": {
+   "kind": "verify",
+   "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
+   "output": {
+    "supported": true,
+    "reason": "The answer states 10–12 hours of fasting before a lipid profile, which is exactly what passages [1] and [2] specify."
+   }
+  },
+  "11af8000ddbaf03bf9e8bb35": {
+   "kind": "safety",
+   "input": "do I need to stop my diabetes medicine before it?",
+   "output": {
+    "verdict": "MEDICAL_ADVICE",
+    "language": "en"
+   }
+  },
+  "12628cfc13adeeb813d23f2a": {
+   "kind": "router",
+   "input": "swimming pool kab khulta hai?",
+   "output": {
+    "intents": [
+     "UNKNOWN"
+    ],
+    "search_queries": []
+   }
+  },
   "12c5cf7922d1cc946b05cd45": {
    "kind": "safety",
    "input": "Is home sample collection free?",
@@ -158,7 +238,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "society emergency contact number"
+    "search_queries": [
+     "society emergency contact number"
+    ]
    }
   },
   "14763d512067a9e9aa1fe7d7": {
@@ -176,7 +258,37 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "home physiotherapy service available"
+    "search_queries": [
+     "home physiotherapy service availability"
+    ]
+   }
+  },
+  "16221432d2121322d190f0e6": {
+   "kind": "respond",
+   "input": "क्या आप कोविड का टीका लगाते हैं?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
+  "16627f4bf31530a57a474c8f": {
+   "kind": "router",
+   "input": "What is the consultation fee for a psychiatrist?",
+   "output": {
+    "intents": [
+     "CLINIC_INFO"
+    ],
+    "search_queries": [
+     "psychiatrist consultation fee"
+    ]
+   }
+  },
+  "1f3ee12c7a9682f01a02d99f": {
+   "kind": "verify",
+   "input": "Which days is home collection not available?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [2] explicitly states \"Home collection is not available on Saturdays or Sundays at Lotus Tower,\" which is exactly what the answer conveys."
    }
   },
   "1fab0c229b86a670b049e12c": {
@@ -211,6 +323,14 @@
     "language": "hinglish"
    }
   },
+  "23191e3786e72bc08d9267e1": {
+   "kind": "respond",
+   "input": "Do you have a dentist?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
   "24683161944939276bda3916": {
    "kind": "router",
    "input": "Is home sample collection free?",
@@ -218,7 +338,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "home sample collection free or fee"
+    "search_queries": [
+     "home sample collection free or fee"
+    ]
    }
   },
   "248539cc6a95471291ef1b5f": {
@@ -229,6 +351,14 @@
     "language": "en"
    }
   },
+  "24e53c005542fe9919e82b45": {
+   "kind": "respond",
+   "input": "How many specialist consultations are covered?",
+   "output": {
+    "content": "\n\nTwo specialist consultations per resident per quarter are covered [1]. Any further ones cost ₹400 each at the member rate [1].",
+    "tool_calls": []
+   }
+  },
   "25d3578acaa0f167cbb176e2": {
    "kind": "router",
    "input": "appointment cancel karne pe paise katenge kya",
@@ -236,7 +366,17 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "appointment cancellation fee policy"
+    "search_queries": [
+     "cancellation fee policy for appointment"
+    ]
+   }
+  },
+  "25ec6e4ca5692c72402e12c5": {
+   "kind": "respond",
+   "input": "What is the consultation fee for a psychiatrist?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
    }
   },
   "2794f3ff72277b9ebc0017d7": {
@@ -262,7 +402,23 @@
     "intents": [
      "SMALL_TALK"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "2a3ede8a4aa31500fa7dd322": {
+   "kind": "respond",
+   "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
+   "output": {
+    "content": "\n\nलिपिड प्रोफाइल से पहले 10–12 घंटे खाली पेट रहना होता है [1]। इस दौरान सादा पानी पी सकते हैं, लेकिन चाय, कॉफ़ी, दूध, जूस, चewing gum या धूम्रपान नहीं [6]।",
+    "tool_calls": []
+   }
+  },
+  "2a618c620b92b717348bb44e": {
+   "kind": "safety",
+   "input": "haan papa saans nahi le pa rahe",
+   "output": {
+    "verdict": "EMERGENCY",
+    "language": "hinglish"
    }
   },
   "2b2eeb242da41d6d4c47c0fa": {
@@ -272,7 +428,7 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "2c47af39c4ee48043ca48c20": {
@@ -299,11 +455,37 @@
     "tool_calls": []
    }
   },
+  "2e5ffa58f2a78e0aa8593434": {
+   "kind": "router",
+   "input": "10:30",
+   "output": {
+    "intents": [
+     "BOOK_SERVICE"
+    ],
+    "search_queries": []
+   }
+  },
+  "2f28b51580f000560c3ae01a": {
+   "kind": "safety",
+   "input": "haan kar do",
+   "output": {
+    "verdict": "SAFE",
+    "language": "hinglish"
+   }
+  },
   "3361b76f9956c570696552c2": {
    "kind": "respond",
    "input": "रविवार को वेलनेस रूम कितने बजे खुलता है?",
    "output": {
     "content": "\n\nरविवार को वेलनेस रूम बंद रहता है [1]।",
+    "tool_calls": []
+   }
+  },
+  "34411337012c717150708c7f": {
+   "kind": "respond",
+   "input": "Do you have a dentist?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
     "tool_calls": []
    }
   },
@@ -314,7 +496,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "is thyroid test covered in plan"
+    "search_queries": [
+     "thyroid test covered in plan"
+    ]
    }
   },
   "3502cf7b4608410a09f860bc": {
@@ -333,6 +517,22 @@
     "language": "en"
    }
   },
+  "3681a79e2ca67b258b16eed0": {
+   "kind": "safety",
+   "input": "swimming pool kab khulta hai?",
+   "output": {
+    "verdict": "SAFE",
+    "language": "hinglish"
+   }
+  },
+  "36dc291e641a76acdf39691c": {
+   "kind": "respond",
+   "input": "क्या आप कोविड का टीका लगाते हैं?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
   "37052d8cf7a201fa35431581": {
    "kind": "respond",
    "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
@@ -346,6 +546,14 @@
    "input": "kya thyroid test plan mein covered hai",
    "output": {
     "content": "\n\nHaan, Thyroid Profile (T3, T4, TSH) plan mein covered hai — har resident ke liye plan year mein ek baar [1]. 1 April 2026 se yeh cover hua hai, pehle cover nahi tha [4]. Fasting ki zaroorat nahi hai, lekin subah collect karwana best hai [3].",
+    "tool_calls": []
+   }
+  },
+  "390adc73f921e08e2f671a5e": {
+   "kind": "respond",
+   "input": "CBC ki report kitni der mein aati hai",
+   "output": {
+    "content": "\n\nCBC ki report 6 hours mein ready hoti hai [2], aur report aapko WhatsApp par mil jayegi [4].",
     "tool_calls": []
    }
   },
@@ -364,7 +572,7 @@
     "intents": [
      "LOG_SYMPTOM"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "3c3f1841c0ba813d12570a4a": {
@@ -405,6 +613,34 @@
    "output": {
     "content": "\n\nNO_ANSWER",
     "tool_calls": []
+   }
+  },
+  "413d9714f1d51e2c12e51fe1": {
+   "kind": "respond",
+   "input": "Can I buy a health checkup package? Which one do you recommend?",
+   "output": {
+    "content": "\n\nMicroHeal doesn't sell or book hospital health-check packages [1], so I can't recommend one either. For packages, you can call the Sanjeevani Hospital front desk at +91 124 4000 1000 [5].",
+    "tool_calls": []
+   }
+  },
+  "41bbb7ff17e20994eea22b2d": {
+   "kind": "respond",
+   "input": "Is home sample collection free?",
+   "output": {
+    "content": "\n\nHome sample collection costs ₹150 per visit, but it's free for residents aged 60 and over [1].",
+    "tool_calls": []
+   }
+  },
+  "4430d1d4f5dc7a7982a6b388": {
+   "kind": "router",
+   "input": "HbA1c ki report kitne time mein aati hai",
+   "output": {
+    "intents": [
+     "CLINIC_INFO"
+    ],
+    "search_queries": [
+     "HbA1c report turnaround time"
+    ]
    }
   },
   "444e6210551911b74b843732": {
@@ -454,7 +690,33 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "visitor parking charge"
+    "search_queries": [
+     "visitor parking charge"
+    ]
+   }
+  },
+  "4beebdd592c91bdc4072fe31": {
+   "kind": "verify",
+   "input": "How long do you keep my chat history?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] states \"Conversation transcripts are kept for 12 months,\" which directly supports the answer's claim that chat transcripts are kept for 12 months."
+   }
+  },
+  "4c058242215911b0360db05c": {
+   "kind": "respond",
+   "input": "kya thyroid test plan mein covered hai",
+   "output": {
+    "content": "\n\nHaan, Thyroid Profile (T3, T4, TSH) plan mein covered hai — har resident ke liye plan year mein ek baar [1]. Plan year 1 April se 31 March tak chalta hai, aur unused test agle year carry over nahi hoti [5].",
+    "tool_calls": []
+   }
+  },
+  "4c44f84054806bb48aa84d99": {
+   "kind": "verify",
+   "input": "Is the vitamin D test covered under my plan?",
+   "output": {
+    "supported": true,
+    "reason": "Passages [1] and [3] both explicitly state that Vitamin D (25-OH) is not covered and is available at the member rate of ₹650, which matches the answer exactly."
    }
   },
   "4c48761d9572c643e1b717b0": {
@@ -472,7 +734,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "pharmacy medicine delivery service"
+    "search_queries": [
+     "pharmacy medicine delivery service"
+    ]
    }
   },
   "502a341adab77eb86b354eba": {
@@ -490,7 +754,7 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "53e85826c601f814c58fe116": {
@@ -532,7 +796,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "specialist consultations covered"
+    "search_queries": [
+     "how many specialist consultations covered"
+    ]
    }
   },
   "5750a32bc277bc4282981479": {
@@ -542,7 +808,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "cancellation charge for appointment"
+    "search_queries": [
+     "cancellation charge for appointment"
+    ]
    }
   },
   "5a60504f02db515d6c90f389": {
@@ -553,7 +821,15 @@
      "LOG_SYMPTOM",
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "5abf17b210c237e2466bdc4e": {
+   "kind": "safety",
+   "input": "What is the consultation fee for a psychiatrist?",
+   "output": {
+    "verdict": "SAFE",
+    "language": "en"
    }
   },
   "5ad65ff5ce5b2380cad83101": {
@@ -563,7 +839,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "home collection unavailable days"
+    "search_queries": [
+     "home collection unavailable days"
+    ]
    }
   },
   "5b10a8fd6ce56c6b0eeb8ad8": {
@@ -606,6 +884,14 @@
     "tool_calls": []
    }
   },
+  "5dc1726326c393e52d817f19": {
+   "kind": "verify",
+   "input": "How many specialist consultations are covered?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states \"Two specialist consultations per resident per quarter are covered\" and \"Further specialist consultations cost ₹400 each at the member rate,\" which exactly matches the answer."
+   }
+  },
   "5fb3f5f5c9f393f861c9afdd": {
    "kind": "safety",
    "input": "what slots does the general physician have this week?",
@@ -637,7 +923,15 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "649efe01892e1cf89499ef2d": {
+   "kind": "respond",
+   "input": "What is the consultation fee for a psychiatrist?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
    }
   },
   "65159e0e6488c48ee70b12b5": {
@@ -680,6 +974,30 @@
     "tool_calls": []
    }
   },
+  "685a3bc404abd81f8963d12b": {
+   "kind": "verify",
+   "input": "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?",
+   "output": {
+    "supported": true,
+    "reason": "All facts in the answer (free cancellation up to 2 hours before, no-show definition, 3 no-shows in 90 days pausing online booking for 30 days, and calling the wellness room as an alternative) are directly stated in passage [1]."
+   }
+  },
+  "685a9e6b70e9900f6de42c7e": {
+   "kind": "verify",
+   "input": "bone doctor yahan aata hai kya",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states that orthopaedics does not visit Royal Palms and that residents can book an orthopaedic appointment at Sanjeevani Hospital through its front desk, which matches both facts in the answer."
+   }
+  },
+  "6ae0b3013b9f476ccda9c5a6": {
+   "kind": "verify",
+   "input": "Which days is home collection not available?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states \"Home collection is not available on Saturdays or Sundays at Lotus Tower,\" which directly matches the answer."
+   }
+  },
   "6df62b810873e28e13276aed": {
    "kind": "safety",
    "input": "Can I get physiotherapy at home?",
@@ -719,12 +1037,30 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "Sunday wellness room opening time"
+    "search_queries": [
+     "Sunday wellness room opening hours"
+    ]
    }
   },
   "709d4587c473b2e7090937af": {
    "kind": "safety",
    "input": "book me a cardiology appointment",
+   "output": {
+    "verdict": "SAFE",
+    "language": "en"
+   }
+  },
+  "7533b6185cff57e8bf62a0f5": {
+   "kind": "respond",
+   "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
+   "output": {
+    "content": "\n\nलिपिड प्रोफाइल से पहले 10–12 घंटे खाली पेट रहना होता है [1][2]।",
+    "tool_calls": []
+   }
+  },
+  "75465333a444f786b5bd1b92": {
+   "kind": "safety",
+   "input": "10:30",
    "output": {
     "verdict": "SAFE",
     "language": "en"
@@ -738,6 +1074,22 @@
     "language": "hi"
    }
   },
+  "7608133a5e7ff8f27f20a229": {
+   "kind": "verify",
+   "input": "kya thyroid test plan mein covered hai",
+   "output": {
+    "supported": true,
+    "reason": "The answer correctly states that Thyroid Profile (T3, T4, TSH) is covered once per resident per plan year (passage [1]) and that the plan year runs 1 April to 31 March with no carry-over of unused tests (passage [5]), all of which directly answer the patient's question about thyroid test coverage."
+   }
+  },
+  "77a58c4ceb6e5bcf8cc3eb90": {
+   "kind": "respond",
+   "input": "How long do you keep my chat history?",
+   "output": {
+    "content": "\n\nYour chat transcripts are kept for 12 months [1].",
+    "tool_calls": []
+   }
+  },
   "77cfbfea5719abd56f856e58": {
    "kind": "router",
    "input": "cancel my appointment with Dr Iyer",
@@ -745,7 +1097,15 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "78aff8d285e6e1596f3fba0b": {
+   "kind": "verify",
+   "input": "What time does the wellness room open on Sunday?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly lists the wellness room's Sunday hours as 09:00 – 13:00, which directly supports the answer's claim that it opens at 09:00 on Sunday."
    }
   },
   "78e86967c3b2d811fc835d1c": {
@@ -764,6 +1124,14 @@
     "tool_calls": []
    }
   },
+  "7b44ca993d4e0c9a74cf7206": {
+   "kind": "verify",
+   "input": "gym ka timing kya hai",
+   "output": {
+    "supported": false,
+    "reason": "The patient asked about gym timings, but the passages only cover the Wellness room hours; the answer incorrectly equates the gym with the wellness room, which the instructions explicitly state are different things."
+   }
+  },
   "7c2d70880a184b0378a56e59": {
    "kind": "router",
    "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
@@ -771,7 +1139,17 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "fasting hours before lipid profile test"
+    "search_queries": [
+     "fasting hours required before lipid profile test"
+    ]
+   }
+  },
+  "7caa981ecbb1b344cc8bd024": {
+   "kind": "respond",
+   "input": "gym ka timing kya hai",
+   "output": {
+    "content": "\n\nGym (wellness room) ke timings:\n- Monday–Saturday: 08:00 – 20:00 [1]\n- Sunday: 09:00 – 13:00 [1]\n- Public holidays: 09:00 – 13:00 [1]\n\nLocation: Block A, basement level, opposite the lift lobby [5]. Phone: +91 124 4000 2301 [1].",
+    "tool_calls": []
    }
   },
   "7ccb100439fdfb221b935e28": {
@@ -779,6 +1157,14 @@
    "input": "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?",
    "output": {
     "content": "\n\nनहीं, स्लॉट से 2 घंटे पहले तक कैंसिल या रीशेड्यूल करना फ्री है [1]। 2 घंटे से कम नोटिस पर कैंसिल करने या अपॉइंटमेंट मिस करने पर वो no-show माना जाता है [1]। 90 दिनों में 3 no-show होने पर 30 दिन ऑनलाइन बुकिंग रुक जाती है, पर wellness room को कॉल करके बुकिंग हो सकती है [1]।",
+    "tool_calls": []
+   }
+  },
+  "7f703af331486aa18cf476a3": {
+   "kind": "respond",
+   "input": "रविवार को वेलनेस रूम कितने बजे खुलता है?",
+   "output": {
+    "content": "\n\nरविवार को वेलनेस रूम बंद रहता है [1]। सप्ताह में समय: सोमवार–शुक्रवार सुबह 10 से शाम 6 बजे, शनिवार सुबह 10 से दोपहर 2 बजे [1]।",
     "tool_calls": []
    }
   },
@@ -797,7 +1183,7 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "83124fdceb8762e5fc900e8d": {
@@ -824,6 +1210,18 @@
     "tool_calls": []
    }
   },
+  "886b8f5a872f6d807e5c391d": {
+   "kind": "router",
+   "input": "क्या आप कोविड का टीका लगाते हैं?",
+   "output": {
+    "intents": [
+     "CLINIC_INFO"
+    ],
+    "search_queries": [
+     "vaccine available at clinic"
+    ]
+   }
+  },
   "887849613c6f045aa7940779": {
    "kind": "safety",
    "input": "मेरी बेटी को दौरा पड़ रहा है, जल्दी बताइए",
@@ -839,7 +1237,15 @@
     "intents": [
      "LOG_SYMPTOM"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "8b141aaf82031712fb58652b": {
+   "kind": "respond",
+   "input": "bone doctor yahan aata hai kya",
+   "output": {
+    "content": "\n\nNahi, orthopaedic doctor Royal Palms par nahi aata [1]. Aap Sanjeevani Hospital ke front desk se orthopaedic appointment book kar sakte hain [1].",
+    "tool_calls": []
    }
   },
   "8bf78cc8dbd2adddf8492558": {
@@ -865,7 +1271,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "gym timing"
+    "search_queries": [
+     "gym opening hours"
+    ]
    }
   },
   "8dec7f8c9c5a4ab90ad1d98b": {
@@ -884,12 +1292,36 @@
     "language": "en"
    }
   },
+  "902892507f8b0df11bc47950": {
+   "kind": "verify",
+   "input": "Is home sample collection free?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [2] explicitly states that home sample collection costs ₹150 per visit and is free for residents aged 60 and over, which matches every fact in the answer."
+   }
+  },
   "90400c91ed591404ac978405": {
    "kind": "safety",
    "input": "ambulance bulao jaldi, papa behosh ho gaye hain",
    "output": {
     "verdict": "EMERGENCY",
     "language": "hinglish"
+   }
+  },
+  "90424895a1c67851303b0a64": {
+   "kind": "safety",
+   "input": "क्या आप कोविड का टीका लगाते हैं?",
+   "output": {
+    "verdict": "SAFE",
+    "language": "hi"
+   }
+  },
+  "904c2dccc832aff95f14e338": {
+   "kind": "verify",
+   "input": "Can I buy a health checkup package? Which one do you recommend?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] confirms MicroHeal does not sell or book hospital packages, and passage [5] provides the Sanjeevani Hospital front desk number (+91 124 4000 1000) for appointments and packages; the answer's statement that it cannot recommend a package is a reasonable inference from not selling them."
    }
   },
   "90d5f88b5fa916010ecede0f": {
@@ -899,7 +1331,17 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "nurse callback time after emergency is raised"
+    "search_queries": [
+     "emergency nurse callback response time"
+    ]
+   }
+  },
+  "9260467f93c462a86100775b": {
+   "kind": "safety",
+   "input": "ok what about two then?",
+   "output": {
+    "verdict": "MEDICAL_ADVICE",
+    "language": "en"
    }
   },
   "92ca3c3826394ebf75bec40a": {
@@ -915,6 +1357,22 @@
    "input": "mumy sidhiyo se gir gyi h, pair hil nhi rha, bht dard ho rha h",
    "output": {
     "verdict": "EMERGENCY",
+    "language": "hinglish"
+   }
+  },
+  "935b1b8e03405d40fb5a142f": {
+   "kind": "safety",
+   "input": "Do you have a dentist?",
+   "output": {
+    "verdict": "SAFE",
+    "language": "en"
+   }
+  },
+  "93bc9575fda6ad77f2360d51": {
+   "kind": "safety",
+   "input": "HbA1c ki report kitne time mein aati hai",
+   "output": {
+    "verdict": "SAFE",
     "language": "hinglish"
    }
   },
@@ -941,7 +1399,23 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "97f5e65ef271e7b4edae4b9c": {
+   "kind": "respond",
+   "input": "HbA1c ki report kitne time mein aati hai",
+   "output": {
+    "content": "\n\nHbA1c ki report 24 hours mein aati hai [1].",
+    "tool_calls": []
+   }
+  },
+  "98742bdb4290f13fa18d9705": {
+   "kind": "respond",
+   "input": "bone doctor yahan aata hai kya",
+   "output": {
+    "content": "\n\nNahi, Orthopaedics (haddi ke doctor) Royal Palms par nahi aate [2]. Aap Sanjeevani Hospital ke front desk se orthopaedic appointment book kar sakte hain [2].",
+    "tool_calls": []
    }
   },
   "9902179ac50f0905ec4738a1": {
@@ -958,6 +1432,14 @@
    "output": {
     "verdict": "SAFE",
     "language": "en"
+   }
+  },
+  "9b7797b0f53231dfb10cb540": {
+   "kind": "respond",
+   "input": "HbA1c ki report kitne time mein aati hai",
+   "output": {
+    "content": "\n\nHbA1c ki report 24 hours mein ready hoti hai [2]. Report aapko WhatsApp par mil jayegi [5].",
+    "tool_calls": []
    }
   },
   "9b8a13754c7d1a84e824e508": {
@@ -984,6 +1466,14 @@
     "language": "en"
    }
   },
+  "9fd7cb996443eba55c71e25a": {
+   "kind": "verify",
+   "input": "What time does the wellness room open on Sunday?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [2] explicitly lists the wellness room's Sunday hours as 09:00 – 13:00, which directly supports the answer."
+   }
+  },
   "a0093a67c65b6c15a6a2443e": {
    "kind": "router",
    "input": "what slots does the general physician have this week?",
@@ -991,7 +1481,15 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "a0764de8a91f25576694d6a7": {
+   "kind": "respond",
+   "input": "Is the vitamin D test covered under my plan?",
+   "output": {
+    "content": "\n\nNo, the Vitamin D (25-OH) test is not covered under your plan. It's available at the member rate of ₹650 [2][3].",
+    "tool_calls": []
    }
   },
   "a1789572336f0c02fbd1dcfe": {
@@ -1001,7 +1499,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "home sample collection charge"
+    "search_queries": [
+     "home sample collection charge"
+    ]
    }
   },
   "a1c30a666b646900e3a8ac63": {
@@ -1011,7 +1511,17 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "chat history retention policy"
+    "search_queries": [
+     "chat history retention policy"
+    ]
+   }
+  },
+  "a1f98d17d9de57ae3b4e79c2": {
+   "kind": "respond",
+   "input": "Which days is home collection not available?",
+   "output": {
+    "content": "\n\nHome collection is not available on Saturdays or Sundays at Lotus Tower [2].",
+    "tool_calls": []
    }
   },
   "a4e52807d00c16e0bccd266b": {
@@ -1021,7 +1531,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "hospital emergency contact number"
+    "search_queries": [
+     "hospital emergency contact number"
+    ]
    }
   },
   "a4e6743f23aa07810ec730a5": {
@@ -1031,7 +1543,7 @@
     "intents": [
      "LOG_SYMPTOM"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "a5e37a9d9320b2e6185ed5b8": {
@@ -1041,7 +1553,7 @@
     "intents": [
      "LIST_SERVICES"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "a60b8c1ee5126af74a219a57": {
@@ -1050,6 +1562,14 @@
    "output": {
     "verdict": "SAFE",
     "language": "hinglish"
+   }
+  },
+  "a69cc10259008fce4d9c9fdd": {
+   "kind": "respond",
+   "input": "gym ka timing kya hai",
+   "output": {
+    "content": "\n\nGym (wellness room) ke timings:\n- Monday–Saturday: 08:00 – 20:00 [1]\n- Sunday: 09:00 – 13:00 [1]\n- Public holidays: 09:00 – 13:00 [1]\n\nKoi sawaal ho to wellness room pe call kar sakte hain: +91 124 4000 2301 [1].",
+    "tool_calls": []
    }
   },
   "a7c801c8bb84e8d1f86f1be3": {
@@ -1092,6 +1612,14 @@
     "language": "hinglish"
    }
   },
+  "a9c500dc7fb0fb8e3883f5bf": {
+   "kind": "verify",
+   "input": "Can I get physiotherapy at home?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] confirms physiotherapy is seen at home with a 45-minute slot, and passage [2] explicitly states \"Physiotherapy is not offered at Lotus Tower,\" so both facts in the answer are directly supported."
+   }
+  },
   "aa4b052e98d2e0726dcf1e79": {
    "kind": "respond",
    "input": "Is home sample collection free?",
@@ -1106,6 +1634,14 @@
    "output": {
     "verdict": "SAFE",
     "language": "hinglish"
+   }
+  },
+  "ab65f2705182fd7c2d10fe12": {
+   "kind": "respond",
+   "input": "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?",
+   "output": {
+    "content": "\n\nनहीं, स्लॉट से 2 घंटे पहले तक कैंसिल या रीशेड्यूल करना फ्री है [1]। 2 घंटे से कम नोटिस पर कैंसिल करने या अपॉइंटमेंट मिस करने पर वो no-show माना जाता है [1]। 90 दिनों में 3 no-show होने पर 30 दिन ऑनलाइन बुकिंग रुक जाती है, पर wellness room को कॉल करके बुकिंग हो सकती है [1]।",
+    "tool_calls": []
    }
   },
   "aedb05d88be96c97058fe241": {
@@ -1131,7 +1667,15 @@
     "intents": [
      "LIST_SERVICES"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "afc7c3c3694bd22fc8f951a7": {
+   "kind": "verify",
+   "input": "रविवार को वेलनेस रूम कितने बजे खुलता है?",
+   "output": {
+    "supported": true,
+    "reason": "The answer correctly states the wellness room is closed on Sunday and provides accurate hours for other days, all directly supported by passage [1] (and confirmed by passage [5])."
    }
   },
   "b00d9e26c8cb4cffc9203e3b": {
@@ -1158,12 +1702,28 @@
     "tool_calls": []
    }
   },
+  "b20551ca9f02e182c3c92082": {
+   "kind": "verify",
+   "input": "Can I buy a health checkup package? Which one do you recommend?",
+   "output": {
+    "supported": true,
+    "reason": "The answer's factual claims (MicroHeal doesn't sell hospital packages, the wellness room can't book them, and the hospital front-desk number is in the society annex) are all directly supported by passage [3]; the statement that no specific package can be recommended is consistent with the passages listing no available packages; and the closing offer to book lab tests or a doctor visit is an offer of further help, which is excluded from the check."
+   }
+  },
   "b51853937ceeab863b3d7869": {
    "kind": "safety",
    "input": "thyroid ki report aayi hai TSH 8.2 hai, iska matlab kya hai",
    "output": {
     "verdict": "MEDICAL_ADVICE",
     "language": "hinglish"
+   }
+  },
+  "b6d77a6866b49d4d549c2707": {
+   "kind": "respond",
+   "input": "home sample collection ka charge kitna hai",
+   "output": {
+    "content": "\n\nHome sample collection aapke liye bilkul free hai — har resident ke liye, har lab test par [1].",
+    "tool_calls": []
    }
   },
   "b8609cb68a8921cda339f2be": {
@@ -1173,7 +1733,7 @@
     "intents": [
      "UNKNOWN"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "b88c9f225ae2d84b82470795": {
@@ -1192,7 +1752,7 @@
      "BOOK_SERVICE",
      "LOG_SYMPTOM"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "b9170c953ed85adb871b2239": {
@@ -1210,7 +1770,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "which doctors visit our society"
+    "search_queries": [
+     "which doctors visit our society"
+    ]
    }
   },
   "bab0da38386ce9bad9f63b24": {
@@ -1220,7 +1782,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "fasting required for lipid profile test"
+    "search_queries": [
+     "fasting required for lipid profile test"
+    ]
    }
   },
   "bb8c7a4b9bb409ca7a4098b2": {
@@ -1229,6 +1793,26 @@
    "output": {
     "verdict": "SAFE",
     "language": "en"
+   }
+  },
+  "bc67b4a47ea798ad1bb719d9": {
+   "kind": "router",
+   "input": "haan kar do",
+   "output": {
+    "intents": [
+     "BOOK_SERVICE"
+    ],
+    "search_queries": []
+   }
+  },
+  "c2a712e81d1e7606a360e896": {
+   "kind": "router",
+   "input": "4",
+   "output": {
+    "intents": [
+     "LOG_SYMPTOM"
+    ],
+    "search_queries": []
    }
   },
   "c32075efa618dffa61340905": {
@@ -1255,6 +1839,14 @@
     "language": "en"
    }
   },
+  "c606472e23fc75d35d651748": {
+   "kind": "respond",
+   "input": "रविवार को वेलनेस रूम कितने बजे खुलता है?",
+   "output": {
+    "content": "\n\nरविवार को वेलनेस रूम बंद रहता है [1]।\n\nसामान्य समय: सोमवार–शुक्रवार 10:00–18:00, शनिवार 10:00–14:00 [1]।",
+    "tool_calls": []
+   }
+  },
   "c6f800b282f802f38c040267": {
    "kind": "router",
    "input": "meri kal ki appointment reschedule kar do",
@@ -1262,7 +1854,7 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "c8424e2d7d9bd00573c13b6d": {
@@ -1272,7 +1864,33 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "vitamin D test covered under plan"
+    "search_queries": [
+     "vitamin D test covered under plan"
+    ]
+   }
+  },
+  "cac5a1f77f872e31ae4140f3": {
+   "kind": "respond",
+   "input": "Can I get physiotherapy at home?",
+   "output": {
+    "content": "\n\nPhysiotherapy is normally a home visit (45-minute session) [1], but it's not offered at Lotus Tower [2].",
+    "tool_calls": []
+   }
+  },
+  "cbcb665e30fed98948825ee9": {
+   "kind": "verify",
+   "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
+   "output": {
+    "supported": true,
+    "reason": "The answer correctly states 10–12 hours fasting for Lipid Profile (supported by passages [1] and [2]) and accurately lists the during-fast rules from passage [6] (plain water allowed; no tea, coffee, milk, juice, chewing gum, or smoking)."
+   }
+  },
+  "cd2c3d1cb461879b45f6bea8": {
+   "kind": "verify",
+   "input": "How long do you keep my chat history?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] states conversation transcripts are kept for 12 months, which directly answers the question about chat history retention."
    }
   },
   "cf05631aaeed91371160026b": {
@@ -1282,7 +1900,33 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "orthopedic doctor visits clinic"
+    "search_queries": [
+     "orthopedic doctor visits clinic"
+    ]
+   }
+  },
+  "cfa170c6c258f0fe82e479c4": {
+   "kind": "respond",
+   "input": "swimming pool kab khulta hai?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
+  "cfd623b9385d27c8531939bb": {
+   "kind": "verify",
+   "input": "HbA1c ki report kitne time mein aati hai",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly lists HbA1c with a report time of 24 hours, which matches the answer."
+   }
+  },
+  "d167f2ce58fd14a136d63ccb": {
+   "kind": "verify",
+   "input": "home sample collection ka charge kitna hai",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] states home sample collection is free for every resident for every LAB booking, and passage [2] confirms all lab tests are booked as LAB services, matching the answer."
    }
   },
   "d1e94043e2f49e9bc7faf447": {
@@ -1293,6 +1937,22 @@
     "language": "hinglish"
    }
   },
+  "d29dee54a2baa4d6c27eb6f4": {
+   "kind": "verify",
+   "input": "home sample collection ka charge kitna hai",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states \"Home sample collection is free for every resident, for every LAB booking,\" which directly supports the answer's claim that it is free for every resident and every lab test."
+   }
+  },
+  "d2f105516d383730a8103518": {
+   "kind": "respond",
+   "input": "Can I get physiotherapy at home?",
+   "output": {
+    "content": "\n\nYes — physiotherapy is offered at home as a 45-minute visit [1]. It's available only where your society's annex lists it [1]. Want me to check the free slots?",
+    "tool_calls": []
+   }
+  },
   "d38f09955434dc602d28f90c": {
    "kind": "router",
    "input": "mere appointmnts dikhao",
@@ -1300,7 +1960,15 @@
     "intents": [
      "LIST_SERVICES"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "d3eca2a04b08afedeae47cc6": {
+   "kind": "verify",
+   "input": "How many specialist consultations are covered?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states \"Two specialist consultations per resident per quarter are covered,\" which directly matches the answer."
    }
   },
   "d3fef68ac9591882cc60206d": {
@@ -1327,6 +1995,14 @@
     "tool_calls": []
    }
   },
+  "d75c87fd58c4835cc44d9c4a": {
+   "kind": "verify",
+   "input": "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?",
+   "output": {
+    "supported": true,
+    "reason": "The answer correctly states that cancellation/rescheduling is free up to 2 hours before the slot, that cancelling within 2 hours or missing counts as a no-show, and that 3 no-shows in 90 days pause online booking for 30 days with the option to call the wellness room — all directly supported by passage [1]."
+   }
+  },
   "d93abc3d6adf95b9670ce161": {
    "kind": "router",
    "input": "एम्बुलेंस किस गेट से आएगी?",
@@ -1334,7 +2010,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "ambulance arrival gate"
+    "search_queries": [
+     "ambulance arrival gate"
+    ]
    }
   },
   "da0ceb848b7fc24baaffc89e": {
@@ -1360,7 +2038,7 @@
     "intents": [
      "LIST_SERVICES"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "db4e2ee3962dbd80b15620ec": {
@@ -1370,7 +2048,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "MRI scans offered"
+    "search_queries": [
+     "MRI scans offered"
+    ]
    }
   },
   "dc510e62c7f4ef44b43d1a5b": {
@@ -1380,7 +2060,15 @@
     "intents": [
      "BOOK_SERVICE"
     ],
-    "search_query": null
+    "search_queries": []
+   }
+  },
+  "dc522cfb97e5e890b5f74567": {
+   "kind": "respond",
+   "input": "Is home sample collection free?",
+   "output": {
+    "content": "\n\nHome sample collection costs ₹150 per visit, but it's free for residents aged 60 and over [2].",
+    "tool_calls": []
    }
   },
   "de4116eacda03c586d9b1fa9": {
@@ -1390,7 +2078,7 @@
     "intents": [
      "SMALL_TALK"
     ],
-    "search_query": null
+    "search_queries": []
    }
   },
   "de64c1b87d07224f9f6c9432": {
@@ -1408,12 +2096,38 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "CBC test report turnaround time"
+    "search_queries": [
+     "CBC report turnaround time"
+    ]
    }
   },
   "df354b428d82912cde5943ca": {
    "kind": "respond",
    "input": "Which days is home collection not available?",
+   "output": {
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
+   }
+  },
+  "dfee6e458d1b24a3ef60627f": {
+   "kind": "verify",
+   "input": "kya thyroid test plan mein covered hai",
+   "output": {
+    "supported": true,
+    "reason": "All claims in the answer are directly supported: Thyroid Profile covered once per resident per plan year (passage [2]), covered since 1 April 2026 and previously not covered (passage [5]), no fasting needed and best collected in the morning (passage [4])."
+   }
+  },
+  "e400cc42f79de6592cc42f1c": {
+   "kind": "respond",
+   "input": "Is the vitamin D test covered under my plan?",
+   "output": {
+    "content": "\n\nNo, the Vitamin D (25-OH) test is not covered under your plan. It's available at the member rate of ₹650 [1][3].",
+    "tool_calls": []
+   }
+  },
+  "e46d577fb6d7c809b9aee2b6": {
+   "kind": "respond",
+   "input": "Do you have a pharmacy that delivers medicines?",
    "output": {
     "content": "\n\nNO_ANSWER",
     "tool_calls": []
@@ -1475,6 +2189,30 @@
     "tool_calls": []
    }
   },
+  "ea565379ef8f158a72f1c01d": {
+   "kind": "verify",
+   "input": "एम्बुलेंस किस गेट से आएगी?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states \"Ambulances enter through Gate 2 on the service road,\" which directly supports the answer."
+   }
+  },
+  "eae84409009db411efdc7d6e": {
+   "kind": "respond",
+   "input": "What time does the wellness room open on Sunday?",
+   "output": {
+    "content": "\n\nThe wellness room opens at 09:00 on Sunday (open 09:00 – 13:00) [2].",
+    "tool_calls": []
+   }
+  },
+  "eb09032bb0d40507b3948b1d": {
+   "kind": "verify",
+   "input": "Is the vitamin D test covered under my plan?",
+   "output": {
+    "supported": true,
+    "reason": "Passages [2] and [3] explicitly state that Vitamin D (25-OH) is not covered and is available at the member rate of ₹650, which matches the answer exactly."
+   }
+  },
   "ecb6155f461b5009320f8dc1": {
    "kind": "router",
    "input": "is vitamin d test covered in my plan",
@@ -1482,7 +2220,9 @@
     "intents": [
      "CLINIC_INFO"
     ],
-    "search_query": "vitamin d test covered in plan"
+    "search_queries": [
+     "vitamin d test coverage in plan"
+    ]
    }
   },
   "ee3aca601fe0f8257c8c8d61": {
@@ -1525,12 +2265,40 @@
     "language": "hinglish"
    }
   },
+  "f2230211b21161ca02737f4d": {
+   "kind": "respond",
+   "input": "What time does the wellness room open on Sunday?",
+   "output": {
+    "content": "\n\nThe wellness room opens at 09:00 on Sunday (open 09:00 – 13:00) [1].",
+    "tool_calls": []
+   }
+  },
   "f22c26ba3017bf753c72a3a9": {
    "kind": "respond",
    "input": "CBC ki report kitni der mein aati hai",
    "output": {
     "content": "\n\nCBC ki report 6 hours mein ready hoti hai [4]. Report aapko WhatsApp par mil jayegi [2].",
     "tool_calls": []
+   }
+  },
+  "f3536145725f32b9b62b1b72": {
+   "kind": "verify",
+   "input": "CBC ki report kitni der mein aati hai",
+   "output": {
+    "supported": true,
+    "reason": "Passage [2] lists CBC report time as 6 hours and passage [4] states reports arrive on WhatsApp, matching the answer."
+   }
+  },
+  "f3e0a0223f8e8d707ffb064a": {
+   "kind": "router",
+   "input": "Do you have a dentist?",
+   "output": {
+    "intents": [
+     "CLINIC_INFO"
+    ],
+    "search_queries": [
+     "dentist available at clinic"
+    ]
    }
   },
   "f5e2629e9897dedc0c5039bb": {
@@ -1541,6 +2309,14 @@
     "language": "en"
    }
   },
+  "f61aa7370ad0685d45b0f3de": {
+   "kind": "verify",
+   "input": "रविवार को वेलनेस रूम कितने बजे खुलता है?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] explicitly states the wellness room is closed on Sunday and lists Mon–Fri 10:00–18:00 and Sat 10:00–14:00, matching every fact in the answer."
+   }
+  },
   "f681723df24900b1e8b6cf6b": {
    "kind": "router",
    "input": "Show my bookings and also tell me if the wellness room is open on Sunday",
@@ -1549,7 +2325,25 @@
      "LIST_SERVICES",
      "CLINIC_INFO"
     ],
-    "search_query": "wellness room open on Sunday"
+    "search_queries": [
+     "wellness room open on Sunday"
+    ]
+   }
+  },
+  "f6c35bf5def0a5ebf3e5ae27": {
+   "kind": "verify",
+   "input": "gym ka timing kya hai",
+   "output": {
+    "supported": false,
+    "reason": "The patient asked about the gym, but the passages only describe the Wellness room; the instructions explicitly state that wellness room hours are not gym hours, and the answer incorrectly equates the two."
+   }
+  },
+  "f7a10083052039f8b567afa9": {
+   "kind": "verify",
+   "input": "HbA1c ki report kitne time mein aati hai",
+   "output": {
+    "supported": true,
+    "reason": "Passage [2] lists HbA1c report time as 24 hours and passage [5] states reports arrive on WhatsApp, both matching the answer."
    }
   },
   "f93ad2ca7492278c639de06c": {
@@ -1614,6 +2408,30 @@
    "output": {
     "verdict": "SAFE",
     "language": "hinglish"
+   }
+  },
+  "fdfd6d09e45d1d19dec014cc": {
+   "kind": "verify",
+   "input": "bone doctor yahan aata hai kya",
+   "output": {
+    "supported": true,
+    "reason": "Passage [2] explicitly states \"Orthopaedics does not visit Royal Palms\" and that residents can book an orthopaedic appointment at Sanjeevani Hospital through its front desk, which matches both claims in the answer."
+   }
+  },
+  "ff9155317f8e5971d4d35703": {
+   "kind": "respond",
+   "input": "home sample collection ka charge kitna hai",
+   "output": {
+    "content": "\n\nHome sample collection aapke liye bilkul free hai — har resident ke liye, har lab test par [1].",
+    "tool_calls": []
+   }
+  },
+  "fff11ddaf82d5c375b1ac693": {
+   "kind": "verify",
+   "input": "Can I get physiotherapy at home?",
+   "output": {
+    "supported": true,
+    "reason": "Passage [1] directly states physiotherapy is 45 minutes, seen \"At home,\" and only offered where the society annex lists it, matching every factual claim in the answer."
    }
   }
  }

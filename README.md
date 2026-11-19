@@ -16,7 +16,7 @@ The only requirement is Docker with Compose. No API key is needed for the first 
 docker compose up -d --build                    # Postgres + the app
 docker compose exec app alembic upgrade head    # already applied at startup; safe to repeat
 make eval                                       # replays recorded model outputs; exits 0
-make test                                       # 133 tests against a real Postgres
+make test                                       # 150 tests against a real Postgres
 ```
 
 Then open http://localhost:8000.
@@ -25,7 +25,7 @@ Then open http://localhost:8000.
   dependencies, so allow several minutes. After that the stack is healthy in under a minute.
 - **Startup does three things before serving,** each safe to repeat: `alembic upgrade head`,
   `python -m app.seed` (3 societies, 12 clinicians, 20 patients) and `python -m app.ingest` (10
-  documents into 78 chunks).
+  documents into 123 chunks).
 - **Ports:** the app is on 8000 and Postgres on 5433. If either is taken, set `APP_HOST_PORT` or
   `DB_HOST_PORT` (in `.env`, or in front of the command).
 - **No `make`?** `make eval` is `docker compose exec -T app python -m evals.run`, and `make test`
@@ -69,7 +69,7 @@ graph, checkpointer, tools and database are real.
 ## The eval
 
 ```bash
-make eval           # 41 labelled messages, 13 retrieval questions
+make eval           # 47 labelled messages, 19 retrieval questions
 make eval-fresh     # a second set written after the prompts were fixed
 make eval EVAL_ARGS="--intent-file path/to/messages.yaml --retrieval-file path/to/questions.yaml"
 ```
@@ -90,13 +90,13 @@ missing and the run fails. Numbers, failure modes and how far to trust them are 
 | Two patients, same slot, same second | The partial unique index in `migrations/versions/0001_initial_schema.py`; the `except IntegrityError` in `app/booking.py`; `DECISIONS.md` record 3 |
 | The classifier is down and an emergency arrives | `app/safety.py` (`classify`), `fixed_reply_node` in `app/graph/nodes.py`; `DECISIONS.md` record 4 |
 | Society scoping | `app/scoping.py`: every read of bookings or documents, each with a required `society_id` |
-| Retrieval | `app/corpus.py` (heading chunks), `app/ingest.py`, `HYBRID_SEARCH_SQL` in `app/scoping.py` |
+| Retrieval | `app/corpus.py` (heading and table-row chunks), `app/ingest.py`, `HYBRID_SEARCH_SQL` in `app/scoping.py`, the answer check in `app/graph/verify.py` |
 
 ```
 app/            the service: endpoints, graph, tools, booking rules, scoping, retrieval
-migrations/     three Alembic migrations
+migrations/     four Alembic migrations
 evals/          the eval sets, the harness, and the recorded model outputs
-tests/          133 tests
+tests/          150 tests
 frontend/       the page (React, built into the image)
 data/           the corpus and seed files from the bundle
 ```
@@ -124,16 +124,14 @@ simply books. `test_booking_written_then_process_dies_then_patient_resends` and
 - **The no-show pause is not enforced.** A cancellation inside 2 hours is recorded as a no-show,
   as the clinic policy says, but the rule that three no-shows in 90 days pause online booking
   for 30 days is not applied.
-- **One lab test per collection slot.** A phlebotomist's home visit is a 15-minute slot, and the
-  corpus says one visit covers all the tests booked for that morning. Here each booking is one
-  test, so a second test in the same slot is refused like any double booking. It would need the
-  unique index to allow several rows for one patient in one slot.
+- **A single test cannot be removed from a collection.** Several lab tests share one visit;
+  cancelling or rescheduling acts on the whole visit.
 - **Escalations are always Level 1.** The SLA document defines three levels. The contract's
   `escalate_emergency` has no level argument, and the document says to use the higher level
   when unsure and that only a nurse may downgrade.
-- **Safety looks at the latest message only.** A follow-up such as "what about two tablets?"
-  has no medical words of its own. The reply prompt also forbids medical advice, as a second
-  layer, but that layer is not measured by the eval.
+- **Safety reads one turn back, no further.** The check sees the patient's message and the
+  assistant's previous message. Anything older is invisible to it; the reply prompt also
+  forbids medical advice, as a second layer, but that layer is not measured by the eval.
 - **No login.** This is an MVP, so a patient picker stands in for sign-in.
 - **The WhatsApp webhook fixtures** in the data bundle are not used, as the brief allows.
 - **Good-to-have rows not done:** the approval step with a LangGraph `interrupt`, and latency
@@ -142,8 +140,8 @@ simply books. `test_booking_written_then_process_dies_then_patient_resends` and
 
 ## What goes beyond the brief
 
-I treated the brief as the floor. Where the product was clearly better with something more, I
-added it, and each addition is listed here.
+I treated the brief as the floor. Where the product was clearly better or more reliable with
+something more, I added it, and each addition is listed here.
 
 - **Three tools beyond the contract's five,** which are unchanged, with the same names and
   signatures:
@@ -156,18 +154,26 @@ added it, and each addition is listed here.
   Tests freeze the clock (`frozen_clock` in `tests/conftest.py`), so their fixed January 2027
   dates stay valid. An outside test that books a fixed date will be refused once that date has
   passed, which is the behaviour the policy asks for.
+- **Several lab tests in one home collection.** A booking is one visit; "book CBC and lipid
+  profile for tomorrow morning" makes one row with two tests (`DECISIONS.md`, record 7).
 - **"You already have this appointment."** A patient who asks again for a slot they hold is told
   so, not that the slot was taken.
+- **An answer check.** A clinic answer is checked against its passages by a second model call
+  before it is shown, and declined if they do not support it (`DECISIONS.md`, record 6).
+- **Retrieval beyond dense search:** hybrid search (`tsvector` keyword search merged with dense
+  search by reciprocal rank fusion, a good-to-have row), each table row indexed as its own
+  chunk, and a question with several parts searched once per part.
+- **The safety check reads the assistant's previous message,** so a follow-up such as "what
+  about two then?" is judged in context.
 - **The frontend is a React app, not one HTML file.** It uses the AI SDK's `useChat` with a
   custom transport (`frontend/src/lib/api/concierge-transport.ts`) that translates the fixed SSE
   events, and shadcn components. It is built inside the Docker image, so nothing extra is needed
-  to run it. Tool results are shown as cards: a booking, free slots as buttons, an emergency
-  alert with dial links.
-- **Hybrid retrieval,** from the good-to-have list: `tsvector` keyword search merged with dense
-  search by reciprocal rank fusion. `EVAL_REPORT.md` has the dense-against-hybrid comparison and
-  the question dense gets wrong.
+  to run it. Tool results are shown as cards, and a "My bookings" panel lists upcoming bookings
+  with Reschedule and Cancel, which send a chat message so every change passes the safety check.
+  The panel reads one extra endpoint, `GET /v1/patients/{patient_id}/bookings`.
 - **Tool-call timeline and reload,** also good-to-have rows: each tool call is shown with its
-  arguments and result, and a reload restores the conversation from `GET /v1/threads/{id}`.
+  arguments and result, and a reload restores the conversation, with each answer's citations,
+  from `GET /v1/threads/{id}`.
 
 ## How this was built
 

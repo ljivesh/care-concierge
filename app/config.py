@@ -21,11 +21,13 @@ class Settings(BaseSettings):
     tool_timeout_s: float = 10.0
     max_tool_calls_per_turn: int = 4
 
-    # Passages scoring below this cosine similarity are not used as evidence.
-    # How it was picked: just under the lowest best-passage score of any answerable
-    # question in evals/retrieval.yaml (0.35), so no answerable question is cut off.
-    # It only removes clearly unrelated text; whether the passages that remain
-    # actually answer the question is decided by the reply model (NO_ANSWER).
+    # If even the closest chunk scores below this cosine similarity, the question is
+    # treated as off-topic and nothing is returned.
+    # How it was picked: clearly under the lowest best-chunk score of any answerable
+    # question in the two eval sets (0.40), so no answerable question is cut off.
+    # It only stops clearly unrelated questions (the MRI question scores 0.25).
+    # Whether the passages really answer the question is decided afterwards, by the
+    # reply model (NO_ANSWER) and then by the answer check (app/graph/verify.py).
     retrieval_min_similarity: float = 0.30
     # Keyword search merged with dense search (reciprocal rank fusion). False = dense only.
     retrieval_hybrid: bool = True
