@@ -191,7 +191,10 @@ HYBRID_SEARCH_SQL = text(
         GROUP BY t.term
     ),
     keyword_score AS (
-        SELECT v.id, sum(w.weight) AS score
+        -- rounded, so two chunks matching the same words score exactly the same and the
+        -- tie is broken by id below; unrounded, the order of a floating-point sum could
+        -- differ between two databases and reorder the results
+        SELECT v.id, round(sum(w.weight)::numeric, 6) AS score
         FROM visible v
         JOIN term_weight w ON v.search_text @@ plainto_tsquery('simple', w.term)
         GROUP BY v.id
@@ -210,7 +213,8 @@ HYBRID_SEARCH_SQL = text(
     JOIN doc_chunks c ON c.id = COALESCE(dense.id, keyword.id)
     JOIN documents d ON d.id = c.document_id
     ORDER BY COALESCE(1.0 / (:rrf_k + dense.rank), 0) + COALESCE(1.0 / (:rrf_k + keyword.rank), 0) DESC,
-             similarity DESC
+             similarity DESC,
+             c.id
     LIMIT :k
     """
 )
