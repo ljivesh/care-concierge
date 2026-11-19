@@ -11,7 +11,7 @@ from datetime import date, datetime, time, timedelta
 from enum import Enum
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -277,7 +277,7 @@ async def book(
                     society_id=society_id,
                     clinician_id=clinician.id,
                     service=service.value,
-                    subtype=subtype,
+                    subtypes=[subtype],
                     scheduled_for=wanted,
                     status=BookingStatus.BOOKED.value,
                     request_id=request_id,
@@ -304,6 +304,17 @@ async def book(
                     clinician_id=clinician.id,
                     scheduled_for=wanted,
                 )
+            if mine and service == Service.LAB and subtype not in mine["subtypes"]:
+                # A home collection the patient already has, and a test that is not on it
+                # yet: one visit covers every test booked for that morning, so add it.
+                return await _add_test_to_visit(
+                    session_factory,
+                    society_id=society_id,
+                    patient_id=patient_id,
+                    clinician_id=clinician.id,
+                    scheduled_for=wanted,
+                    subtype=subtype,
+                )
             if mine:
                 return {**mine, "already_booked": True}
             if violated_constraint(exc) != UQ_ACTIVE_SLOT:
@@ -324,6 +335,43 @@ async def book(
         ),
         suggestions,
     )
+
+
+async def _add_test_to_visit(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    society_id: str,
+    patient_id: str,
+    clinician_id: str,
+    scheduled_for: datetime,
+    subtype: str,
+) -> dict:
+    """Append a test to the patient's existing collection visit.
+
+    One UPDATE that only matches while the test is not already on the row, so two
+    requests adding tests at the same moment cannot lose or duplicate one.
+    """
+    async with session_factory() as session, session.begin():
+        await session.execute(
+            update(ServiceRequest)
+            .where(
+                ServiceRequest.patient_id == patient_id,
+                ServiceRequest.society_id == society_id,
+                ServiceRequest.clinician_id == clinician_id,
+                ServiceRequest.scheduled_for == scheduled_for,
+                ServiceRequest.status == BookingStatus.BOOKED.value,
+                ~ServiceRequest.subtypes.any(subtype),
+            )
+            .values(subtypes=func.array_append(ServiceRequest.subtypes, subtype))
+        )
+        visit = await scoping.find_own_active_booking(
+            session,
+            society_id=society_id,
+            patient_id=patient_id,
+            clinician_id=clinician_id,
+            scheduled_for=scheduled_for,
+        )
+    return {**visit, "test_added": True}
 
 
 # ---------- changing a booking ----------

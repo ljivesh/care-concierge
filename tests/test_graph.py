@@ -244,7 +244,7 @@ async def test_booking_continues_after_a_restart_without_asking_twice(session_fa
     # The department came from before the restart, the date from after it.
     async with session_factory() as session:
         booking = await session.scalar(select(ServiceRequest))
-    assert booking.subtype == "CARDIOLOGY" and booking.clinician_id == "cln_02"
+    assert booking.subtypes == ["CARDIOLOGY"] and booking.clinician_id == "cln_02"
     assert reply_text(after) == "Your appointment is booked."
     # Nothing was asked twice: one question in the whole transcript, and the department never again.
     questions = [m.content for m in after["messages"] if isinstance(m, AIMessage) and m.content.endswith("?")]
@@ -408,3 +408,24 @@ async def test_medical_intent_from_the_router_does_not_leave_a_search_behind(dep
     assert reply_text(state) == replies.medical_advice(Language.EN)
     assert tool_runs == []
     assert not any(isinstance(m, AIMessage) and m.tool_calls for m in state["messages"])
+
+
+async def test_two_lab_tests_in_one_message_become_one_visit(deps, checkpointer, session_factory, monkeypatch):
+    async def books_two_tests(llm, tools, messages):
+        if isinstance(messages[-1], ToolMessage):
+            return AIMessage("Both tests are on your collection.")
+        reply = tool_call("book_service", service="LAB", subtype="CBC", scheduled_for="2027-01-12T07:15")
+        reply.tool_calls.append(
+            tool_call("book_service", service="LAB", subtype="LIPID_PROFILE", scheduled_for="2027-01-12T07:15").tool_calls[0]
+        )
+        return reply
+
+    script(monkeypatch, intents=[Intent.BOOK_SERVICE], reply=books_two_tests)
+
+    state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "book CBC and lipid profile, 12 Jan 7:15")
+
+    async with session_factory() as session:
+        rows = (await session.scalars(select(ServiceRequest))).all()
+    assert len(rows) == 1 and rows[0].subtypes == ["CBC", "LIPID_PROFILE"]
+    results = [m.artifact for m in state["messages"] if isinstance(m, ToolMessage)]
+    assert "test_added" not in results[0] and results[1]["test_added"] is True

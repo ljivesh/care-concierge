@@ -452,3 +452,67 @@ async def test_reschedule_to_a_time_off_the_grid_or_too_soon_is_refused(session_
         await reschedule(session_factory, patient_id="pat_001", booking_id=booking_id, scheduled_for=TUESDAY_1030 + timedelta(days=7))
     assert too_late.value.code == ErrorCode.TOO_LATE_TO_CHANGE
     assert "wellness room" in too_late.value.message
+
+
+# ---------- several lab tests in one home-collection visit ----------
+
+# Sunita Rawat (cln_06) collects at Shivalik Greens Monday to Saturday, 07:00-08:00, 15-minute slots.
+TUESDAY_0715 = datetime(2027, 1, 12, 7, 15, tzinfo=IST)
+
+
+def lab_test(patient_id: str, subtype: str, when: datetime = TUESDAY_0715):
+    return dict(
+        patient_id=patient_id, service=Service.LAB, subtype=subtype, scheduled_for=when, request_id=uuid.uuid4()
+    )
+
+
+async def test_a_second_lab_test_joins_the_same_visit(session_factory):
+    first = await book(session_factory, **lab_test("pat_001", "CBC"))
+
+    second = await book(session_factory, **lab_test("pat_001", "LIPID_PROFILE"))
+
+    assert second["id"] == first["id"]  # the same visit, not a new booking
+    assert second["subtypes"] == ["CBC", "LIPID_PROFILE"] and second["test_added"] is True
+    assert first["subtypes"] == ["CBC"] and "test_added" not in first
+    assert await count_bookings(session_factory) == 1
+
+
+async def test_the_same_lab_test_twice_is_already_booked(session_factory):
+    await book(session_factory, **lab_test("pat_001", "CBC"))
+
+    again = await book(session_factory, **lab_test("pat_001", "CBC"))
+
+    assert again["already_booked"] is True and again["subtypes"] == ["CBC"]
+
+
+async def test_another_patient_cannot_share_the_collection_slot(session_factory):
+    await book(session_factory, **lab_test("pat_001", "CBC"))
+
+    with pytest.raises(ConciergeError) as refused:
+        await book(session_factory, **lab_test("pat_002", "LIPID_PROFILE"))
+
+    assert refused.value.code == ErrorCode.SLOT_TAKEN
+    assert await count_bookings(session_factory) == 1
+
+
+async def test_tests_added_at_the_same_moment_all_land_once(session_factory):
+    await book(session_factory, **lab_test("pat_001", "CBC"))
+
+    await asyncio.gather(
+        book(session_factory, **lab_test("pat_001", "LIPID_PROFILE")),
+        book(session_factory, **lab_test("pat_001", "HBA1C")),
+        book(session_factory, **lab_test("pat_001", "LIPID_PROFILE")),  # the same test, twice
+    )
+
+    async with session_factory() as session:
+        row = await session.scalar(select(ServiceRequest))
+    assert sorted(row.subtypes) == ["CBC", "HBA1C", "LIPID_PROFILE"]
+    assert await count_bookings(session_factory) == 1
+
+
+async def test_a_doctor_slot_never_takes_a_second_subtype(session_factory):
+    first = await book(session_factory, **cardiology("pat_001"))
+
+    again = await book(session_factory, **cardiology("pat_001"))
+
+    assert again["already_booked"] is True and again["subtypes"] == ["CARDIOLOGY"] == first["subtypes"]

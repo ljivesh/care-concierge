@@ -14,7 +14,9 @@ export function BookingRow({ booking }: { booking: Booking }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-sm">{booking.clinician_name}</p>
-        <p className="truncate text-muted-foreground text-xs">{subtypeLabel(booking.subtype)}</p>
+        <p className="truncate text-muted-foreground text-xs">
+          {(booking.subtypes ?? [booking.subtype]).map(subtypeLabel).join(", ")}
+        </p>
       </div>
       <div className="text-right text-xs">
         <p className="font-medium">{date}</p>
@@ -46,6 +48,9 @@ function headline(booking: Booking) {
       text: was ? `Appointment moved from ${was.date}, ${was.time}` : "Appointment moved",
       tone: "text-primary",
     };
+  }
+  if (booking.test_added) {
+    return { icon: CalendarCheck, text: "Test added to your collection", tone: "text-primary" };
   }
   if (booking.already_booked || booking.unchanged) {
     return { icon: CalendarCheck, text: "You already have this appointment", tone: "text-primary" };

@@ -6,10 +6,14 @@ export interface Booking {
   clinician_name: string;
   service: "DOCTOR" | "LAB";
   subtype: string;
+  /** Everything the visit is for. A home collection can carry several tests. */
+  subtypes?: string[];
   scheduled_for: string; // ISO time in the society's timezone
   status: string;
   /** True when the patient asked again for an appointment they already hold. */
   already_booked?: boolean;
+  /** True when a lab test was added to a collection the patient already had. */
+  test_added?: boolean;
   /** Set by cancel_service_request and reschedule_service_request. */
   cancelled?: boolean;
   already_cancelled?: boolean;

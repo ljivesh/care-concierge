@@ -106,7 +106,7 @@ class Clinician(Base):
 
 
 class ServiceRequest(Base):
-    """A booking: one patient, one clinician, one slot start."""
+    """A booking: one patient's visit with one clinician at one slot start."""
 
     __tablename__ = "service_requests"
     __table_args__ = (
@@ -134,7 +134,9 @@ class ServiceRequest(Base):
     society_id: Mapped[str] = mapped_column(ForeignKey("societies.id"), index=True)
     clinician_id: Mapped[str] = mapped_column(ForeignKey("clinicians.id"))
     service: Mapped[str] = mapped_column(Text)
-    subtype: Mapped[str] = mapped_column(Text)
+    # What the visit is for. A doctor consultation has one; a home collection can
+    # have several tests, because one visit by the phlebotomist covers them all.
+    subtypes: Mapped[list[str]] = mapped_column(ARRAY(Text))
     scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(Text, server_default=text("'BOOKED'"))
     request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))

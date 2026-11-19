@@ -35,7 +35,8 @@ def booking_to_dict(row: ServiceRequest, clinician_name: str, timezone: str) -> 
         "clinician_id": row.clinician_id,
         "clinician_name": clinician_name,
         "service": row.service,
-        "subtype": row.subtype,
+        "subtype": row.subtypes[0],  # the first one booked; kept for callers that expect one
+        "subtypes": list(row.subtypes),
         "scheduled_for": row.scheduled_for.astimezone(ZoneInfo(timezone)).isoformat(),
         "status": row.status,
         "request_id": str(row.request_id),
