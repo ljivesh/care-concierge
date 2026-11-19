@@ -252,8 +252,21 @@ async def book(
                 existing = await scoping.find_booking_by_request_id(
                     session, society_id=society_id, patient_id=patient_id, request_id=request_id
                 )
-            if existing:
-                return existing
+                if existing:
+                    return existing
+                # Or does this patient already hold the slot? That happens when they
+                # send the same booking again as a new message (a new request_id),
+                # for example after never seeing the first reply. Tell them it is
+                # theirs, not that "someone" took it.
+                mine = await scoping.find_own_active_booking(
+                    session,
+                    society_id=society_id,
+                    patient_id=patient_id,
+                    clinician_id=clinician.id,
+                    scheduled_for=wanted,
+                )
+            if mine:
+                return {**mine, "already_booked": True}
             if violated_constraint(exc) != UQ_ACTIVE_SLOT:
                 raise ConciergeError(
                     ErrorCode.REQUEST_ID_REUSED,

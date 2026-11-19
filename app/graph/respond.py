@@ -40,6 +40,8 @@ said in this conversation. Never guess, assume or pick a default.
 patient already gave, even several messages ago.
 - "Tomorrow" or "next Tuesday" count as given: work out the date from Now.
 - Say a booking is made only when book_service returned it. Then confirm clinician, date and time.
+- If book_service returns "already_booked": true, the patient already had this exact appointment \
+and nothing new was booked. Tell them they already have it; do not say it was booked again.
 - If a tool returns an error, tell the patient what its message says and offer any suggested slots.
 - If the patient asks what times are available, or gives a department but no time, call \
 find_available_slots and offer the slots it returns. Offer only slots a tool returned. Keep the \

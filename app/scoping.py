@@ -74,6 +74,21 @@ async def find_booking_by_request_id(
     return booking_to_dict(*row) if row else None
 
 
+async def find_own_active_booking(
+    session: AsyncSession, *, society_id: str, patient_id: str, clinician_id: str, scheduled_for: datetime
+) -> dict | None:
+    """This patient's own active booking in a slot, if they hold it. Scoped to the
+    patient, so it can never reveal who else has the slot."""
+    query = _bookings(society_id).where(
+        ServiceRequest.patient_id == patient_id,
+        ServiceRequest.clinician_id == clinician_id,
+        ServiceRequest.scheduled_for == scheduled_for,
+        ServiceRequest.status == "BOOKED",
+    )
+    row = (await session.execute(query)).first()
+    return booking_to_dict(*row) if row else None
+
+
 async def booked_times(
     session: AsyncSession, *, society_id: str, clinician_id: str, start: datetime, end: datetime
 ) -> set[datetime]:

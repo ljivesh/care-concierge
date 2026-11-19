@@ -33,7 +33,7 @@ export function BookingCard({ booking }: { booking: Booking }) {
     <div className="space-y-3 rounded-xl border bg-card p-4">
       <p className="flex items-center gap-2 font-medium text-primary text-sm">
         <CalendarCheck className="size-4" />
-        Appointment booked
+        {booking.already_booked ? "You already have this appointment" : "Appointment booked"}
       </p>
       <BookingRow booking={booking} />
     </div>

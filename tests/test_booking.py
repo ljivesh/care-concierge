@@ -256,3 +256,37 @@ async def test_free_slots_for_something_not_offered_is_refused(session_factory):
         await slots_for(session_factory, patient_id="pat_010", subtype="PHYSIOTHERAPY")
 
     assert refused.value.code == ErrorCode.NOT_OFFERED_AT_SOCIETY
+
+
+# ---------- the patient asks again for a slot they already hold ----------
+
+
+async def test_same_patient_same_slot_new_request_is_told_it_is_already_theirs(session_factory):
+    first = await book(session_factory, **cardiology("pat_001"))
+
+    again = await book(session_factory, **cardiology("pat_001"))  # a new request_id: a retyped message
+
+    assert again["id"] == first["id"]
+    assert again["already_booked"] is True
+    assert "already_booked" not in first
+    assert await count_bookings(session_factory) == 1
+
+
+async def test_another_patient_is_still_told_the_slot_is_taken_and_learns_nothing_else(session_factory):
+    await book(session_factory, **cardiology("pat_001"))
+
+    with pytest.raises(ConciergeError) as refused:
+        await book(session_factory, **cardiology("pat_002"))
+
+    assert refused.value.code == ErrorCode.SLOT_TAKEN
+    assert "pat_001" not in refused.value.message and "Ananya" not in refused.value.message
+
+
+async def test_a_cancelled_booking_of_ones_own_does_not_count_as_already_booked(session_factory):
+    first = await book(session_factory, **cardiology("pat_001"))
+    async with session_factory() as session, session.begin():
+        await session.execute(update(ServiceRequest).values(status="CANCELLED"))
+
+    again = await book(session_factory, **cardiology("pat_001"))
+
+    assert again["id"] != first["id"] and "already_booked" not in again

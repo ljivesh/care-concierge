@@ -8,6 +8,8 @@ export interface Booking {
   subtype: string;
   scheduled_for: string; // ISO time in the society's timezone
   status: string;
+  /** True when the patient asked again for an appointment they already hold. */
+  already_booked?: boolean;
 }
 
 export interface SymptomLog {
