@@ -63,7 +63,7 @@ def must_not_be_called(what: str):
 def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, language=Language.EN, intents=None, search_queries=(), reply=None, supported=True):
     """Replace the three model calls. Anything left as None must not be called."""
 
-    async def fake_safety(llm, message):
+    async def fake_safety(llm, message, previous=None):
         return SafetyDecision(verdict=verdict, language=language)
 
     async def fake_router(llm, conversation):
@@ -148,11 +148,11 @@ def test_no_path_reaches_a_tool_without_passing_safety(deps, checkpointer):
 # ---------- the safety classifier fails: what the patient sees, and no tool ran ----------
 
 
-async def classifier_raises(llm, message):
+async def classifier_raises(llm, message, previous=None):
     raise ConnectionError("provider down")
 
 
-async def classifier_hangs(llm, message):
+async def classifier_hangs(llm, message, previous=None):
     await asyncio.sleep(30)
 
 
@@ -513,3 +513,25 @@ async def test_a_booking_reply_is_not_sent_to_the_answer_check(deps, checkpointe
     state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "book cardiology 2027-01-12 10:30")
 
     assert reply_text(state) == "Your appointment is booked."
+
+
+# ---------- the safety check reads the previous turn ----------
+
+
+async def test_safety_check_is_given_the_assistants_previous_message(deps, checkpointer, monkeypatch):
+    seen = []
+
+    async def records_context(llm, message, previous=None):
+        seen.append((message, previous))
+        return SafetyDecision(verdict=SafetyVerdict.MEDICAL_ADVICE, language=Language.EN)
+
+    monkeypatch.setattr(safety, "ask_model", records_context)
+    monkeypatch.setattr(router, "ask_model", must_not_be_called("the router"))
+    monkeypatch.setattr(respond, "ask_model", must_not_be_called("the reply model"))
+    graph, thread = build_graph(deps, checkpointer), str(uuid.uuid4())
+
+    await send(graph, thread, "how much paracetamol can I take?")
+    await send(graph, thread, "what about two tablets then?")
+
+    assert seen[0] == ("how much paracetamol can I take?", None)  # nothing before the first message
+    assert seen[1] == ("what about two tablets then?", replies.medical_advice(Language.EN))

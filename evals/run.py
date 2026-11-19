@@ -65,15 +65,17 @@ FAILED = "FAILED"  # the classifier or router gave no answer (fail closed); not 
 
 async def classify_row(row: dict, llm, settings) -> dict:
     """What the app would decide for one message: safety verdict first, then the router if SAFE."""
+    previous = row.get("previous")  # the assistant's message this one replies to, if any
     outcome = await safety.classify(
-        llm, row["text"], timeout_s=settings.safety_timeout_s, fallback_language=Language.EN
+        llm, row["text"], timeout_s=settings.safety_timeout_s, fallback_language=Language.EN, previous=previous
     )
     result = {"verdict": outcome.verdict.value if outcome.verdict else FAILED, "language": outcome.language.value}
     if outcome.verdict in (SafetyVerdict.EMERGENCY, SafetyVerdict.MEDICAL_ADVICE):
         result["intents"] = [outcome.verdict.value]  # the graph never reaches the router
     elif outcome.verdict == SafetyVerdict.SAFE:
         try:
-            route = await router.route(llm, [HumanMessage(row["text"])])
+            conversation = ([AIMessage(previous)] if previous else []) + [HumanMessage(row["text"])]
+            route = await router.route(llm, conversation)
             result["intents"] = [i.value for i in route.intents]
         except Exception:
             result["intents"] = [FAILED]

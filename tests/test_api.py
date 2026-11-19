@@ -33,7 +33,7 @@ async def client(session_factory, embedder, monkeypatch):  # session_factory emp
 
 
 def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, intents=(Intent.BOOK_SERVICE,), reply=None):
-    async def fake_safety(llm, message):
+    async def fake_safety(llm, message, previous=None):
         return SafetyDecision(verdict=verdict, language=Language.EN)
 
     async def fake_router(llm, conversation):
@@ -217,7 +217,7 @@ async def test_emergency_stream(client, session_factory, monkeypatch):
 
 
 async def test_classifier_down_patient_sees_the_fixed_reply_and_no_tool_event(client, session_factory, monkeypatch):
-    async def provider_down(llm, message):
+    async def provider_down(llm, message, previous=None):
         raise ConnectionError("provider down")
 
     monkeypatch.setattr(safety, "ask_model", provider_down)

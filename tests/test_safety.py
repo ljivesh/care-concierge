@@ -20,7 +20,7 @@ LLM = object()  # never used: ask_model is replaced in every test
 
 
 def model_says(monkeypatch, verdict: SafetyVerdict, language: Language) -> None:
-    async def fake(llm, message):
+    async def fake(llm, message, previous=None):
         return SafetyDecision(verdict=verdict, language=language)
 
     monkeypatch.setattr(safety, "ask_model", fake)
@@ -48,7 +48,7 @@ async def test_verdict_and_language_pass_through(monkeypatch, verdict):
 
 
 async def test_classifier_raises_fails_closed_and_is_logged(monkeypatch, caplog):
-    async def provider_down(llm, message):
+    async def provider_down(llm, message, previous=None):
         raise ConnectionError("provider unreachable")
 
     monkeypatch.setattr(safety, "ask_model", provider_down)
@@ -65,7 +65,7 @@ async def test_classifier_raises_fails_closed_and_is_logged(monkeypatch, caplog)
 async def test_one_garbled_answer_is_retried_and_does_not_fail(monkeypatch, caplog):
     calls = []
 
-    async def garbled_once(llm, message):
+    async def garbled_once(llm, message, previous=None):
         calls.append(message)
         if len(calls) == 1:
             raise ValueError("tool call validation failed")
@@ -82,7 +82,7 @@ async def test_one_garbled_answer_is_retried_and_does_not_fail(monkeypatch, capl
 
 
 async def test_classifier_times_out_fails_closed_and_is_logged(monkeypatch, caplog):
-    async def hangs(llm, message):
+    async def hangs(llm, message, previous=None):
         await asyncio.sleep(30)
 
     monkeypatch.setattr(safety, "ask_model", hangs)
@@ -98,7 +98,7 @@ async def test_classifier_times_out_fails_closed_and_is_logged(monkeypatch, capl
 
 
 async def test_unreadable_model_answer_fails_closed(monkeypatch, caplog):
-    async def returns_garbage(llm, message):
+    async def returns_garbage(llm, message, previous=None):
         return SafetyDecision.model_validate({"verdict": "PROBABLY_FINE", "language": "en"})
 
     monkeypatch.setattr(safety, "ask_model", returns_garbage)

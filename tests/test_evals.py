@@ -35,7 +35,7 @@ async def test_recorded_output_is_replayed_without_calling_the_model(tmp_path, r
     path = tmp_path / "outputs.json"
     calls = []
 
-    async def real_model(llm, message):
+    async def real_model(llm, message, previous=None):
         calls.append(message)
         return SafetyDecision(verdict=SafetyVerdict.EMERGENCY, language=Language.EN)
 

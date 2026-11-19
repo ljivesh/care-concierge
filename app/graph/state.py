@@ -56,6 +56,19 @@ def latest_user_text(state: ConciergeState) -> str:
     return next(m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage))
 
 
+def previous_assistant_text(state: ConciergeState) -> str | None:
+    """What the assistant last said before the patient's latest message, if anything."""
+    seen_latest = False
+    for message in reversed(state["messages"]):
+        if isinstance(message, HumanMessage):
+            if seen_latest:
+                return None  # reached the turn before without finding assistant text
+            seen_latest = True
+        elif seen_latest and isinstance(message, AIMessage) and str(message.content).strip():
+            return str(message.content)
+    return None
+
+
 def this_turn(messages: list[AnyMessage]) -> list[AnyMessage]:
     """The latest patient message and everything after it."""
     for index in range(len(messages) - 1, -1, -1):

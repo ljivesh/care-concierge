@@ -30,6 +30,7 @@ from app.graph.state import (
     ConciergeState,
     latest_user_text,
     passages_this_turn,
+    previous_assistant_text,
     this_turn,
     without_dangling_tool_calls,
 )
@@ -83,6 +84,8 @@ def make_safety_node(deps: Deps):
             text,
             timeout_s=deps.settings.safety_timeout_s,
             fallback_language=replies.guess_language(text, state["language"]),
+            # so a short follow-up ("what about two then?") is read in context
+            previous=previous_assistant_text(state),
         )
         return {
             "safety_verdict": outcome.verdict.value if outcome.verdict else None,

@@ -83,11 +83,12 @@ class ModelCache:
 
         verify.ask_model = cached_verify
 
-        async def cached_safety(llm, message):
+        async def cached_safety(llm, message, previous=None):
             async def call():
-                return (await real_safety(llm, message)).model_dump(mode="json")
+                return (await real_safety(llm, message, previous)).model_dump(mode="json")
 
-            return SafetyDecision(**await self.get("safety", message, call, preview=message))
+            asked = [message, previous] if previous else message
+            return SafetyDecision(**await self.get("safety", asked, call, preview=message))
 
         async def cached_router(llm, conversation):
             async def call():
