@@ -32,10 +32,10 @@ class Settings(BaseSettings):
 
     # Any OpenAI-compatible endpoint works. LLM_PROVIDER picks a known base URL
     # (cerebras, groq, openai, openrouter); LLM_BASE_URL overrides it for anything else.
-    llm_provider: str = "groq"
+    llm_provider: str = "cerebras"
     llm_base_url: str = ""
     llm_api_key: str = ""  # empty is valid: `make eval` must run without a key
-    llm_model: str = ""
+    llm_model: str = "qwen-3.8-27b"
     llm_timeout_s: float = 30.0
     # Total budget for the safety check, including one retry and any rate-limit
     # wait. Groq's free tier (8,000 tokens a minute) can make a call wait 7 seconds.

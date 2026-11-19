@@ -22,13 +22,16 @@ services:
       db:
         condition: service_healthy # wait until Postgres accepts connections
     environment:
+      # The project folder is mounted into the container, which runs as root. Without
+      # this, Python would leave root-owned __pycache__ folders in your checkout.
+      PYTHONDONTWRITEBYTECODE: "1"
       # Inside the compose network the database host is the service name "db".
       DATABASE_URL: postgresql+psycopg://concierge:concierge@db:5432/concierge
       # ${VAR:-default} is filled from .env if it exists; a missing .env is fine.
-      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      LLM_PROVIDER: ${LLM_PROVIDER:-cerebras}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_MODEL: ${LLM_MODEL:-qwen-3.8-27b}
     ports:
       - "${APP_HOST_PORT:-8000}:8000"
     volumes:
