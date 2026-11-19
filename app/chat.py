@@ -22,6 +22,7 @@ from collections.abc import AsyncIterator
 from langchain_core.messages import AIMessage, AIMessageChunk, AnyMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from app.contract import Intent
 from app.graph.respond import NO_ANSWER
 from app.graph.state import this_turn
 
@@ -72,6 +73,10 @@ async def stream_turn(
         seen_before = before.values.get("request_id") == request_id
         replayed = seen_before and not before.next
 
+        # A clinic answer is checked against its passages before it is shown (the verify
+        # node), so its tokens are held back and the checked reply is sent in one piece.
+        hold_reply = seen_before and before.values.get("intents") == [Intent.CLINIC_INFO.value]
+
         if replayed:
             # This request already ran to the end. Report it again; run nothing.
             for message in this_turn(before.values["messages"])[1:]:
@@ -84,6 +89,8 @@ async def stream_turn(
                 if mode == "messages":
                     piece, meta = chunk
                     # Only the reply-writing model's text; the safety and router calls stay private.
+                    if hold_reply:
+                        continue
                     if meta.get("langgraph_node") == "respond" and isinstance(piece, AIMessageChunk) and isinstance(piece.content, str) and piece.content:
                         held += piece.content
                         if not streamed:
@@ -94,6 +101,8 @@ async def stream_turn(
                             held = ""
                 else:
                     for node, update in chunk.items():
+                        if node == "router" and update:
+                            hold_reply = update.get("intents") == [Intent.CLINIC_INFO.value]
                         for message in (update or {}).get("messages", []):
                             for event in _tool_events(message):
                                 streamed = held = ""  # text before a tool call was not the reply

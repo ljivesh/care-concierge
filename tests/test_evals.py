@@ -6,7 +6,7 @@ import pytest
 
 from app import safety
 from app.contract import SafetyVerdict
-from app.graph import respond, router
+from app.graph import respond, router, verify
 from app.replies import Language
 from app.safety import SafetyDecision
 from evals.cache import CacheMiss, ModelCache
@@ -26,9 +26,9 @@ def test_precision_and_recall():
 
 @pytest.fixture
 def restore_model_calls():
-    originals = (safety.ask_model, router.ask_model, respond.ask_model)
+    originals = (safety.ask_model, router.ask_model, respond.ask_model, verify.ask_model)
     yield
-    safety.ask_model, router.ask_model, respond.ask_model = originals
+    safety.ask_model, router.ask_model, respond.ask_model, verify.ask_model = originals
 
 
 async def test_recorded_output_is_replayed_without_calling_the_model(tmp_path, restore_model_calls):

@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from app import main, replies, safety
 from app.contract import Intent, SafetyVerdict
 from app.db.models import Escalation, ServiceRequest
-from app.graph import respond, router
+from app.graph import respond, router, verify
 from app.graph.router import Route
 from app.main import app
 from app.replies import Language
@@ -42,6 +42,11 @@ def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, intents=(Intent.BOOK_SERV
     monkeypatch.setattr(safety, "ask_model", fake_safety)
     monkeypatch.setattr(router, "ask_model", fake_router)
     monkeypatch.setattr(respond, "ask_model", reply)
+
+    async def fake_check(llm, question, passages, answer):
+        return verify.Grounding(supported=True, reason="scripted")
+
+    monkeypatch.setattr(verify, "ask_model", fake_check)
 
 
 async def books_cardiology(llm, tools, messages):

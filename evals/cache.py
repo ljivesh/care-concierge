@@ -1,7 +1,7 @@
 """Record and replay of model outputs, so the eval runs with no API key.
 
-The app talks to the model in exactly three places: safety.ask_model,
-router.ask_model and respond.ask_model. `install` swaps each for a wrapper:
+The app talks to the model in exactly four places: safety.ask_model,
+router.ask_model, respond.ask_model and verify.ask_model. `install` swaps each for a wrapper:
 
   - the answer is in the cache  -> return it; the model is not called
   - not in the cache, key set   -> call the model, store the answer
@@ -19,7 +19,7 @@ from pathlib import Path
 from langchain_core.messages import AIMessage, AnyMessage, SystemMessage
 
 from app import safety
-from app.graph import respond, router
+from app.graph import respond, router, verify
 from app.graph.router import Route
 from app.safety import SafetyDecision
 
@@ -70,8 +70,18 @@ class ModelCache:
         self.path.write_text(json.dumps(body, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     def install(self) -> None:
-        """Put the cache in front of the three model calls."""
+        """Put the cache in front of the four model calls."""
         real_safety, real_router, real_respond = safety.ask_model, router.ask_model, respond.ask_model
+        real_verify = verify.ask_model
+
+        async def cached_verify(llm, question, passages, answer):
+            async def call():
+                return (await real_verify(llm, question, passages, answer)).model_dump(mode="json")
+
+            asked = [question, passages, answer]
+            return verify.Grounding(**await self.get("verify", asked, call, preview=question))
+
+        verify.ask_model = cached_verify
 
         async def cached_safety(llm, message):
             async def call():

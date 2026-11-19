@@ -21,6 +21,7 @@ from app.graph.nodes import (
     make_router_node,
     make_safety_node,
     make_tools_node,
+    make_verify_node,
 )
 from app.graph.state import ConciergeState
 
@@ -32,6 +33,7 @@ def build_graph(deps: Deps, checkpointer: BaseCheckpointSaver) -> CompiledStateG
     graph.add_node("router", make_router_node(deps))
     graph.add_node("respond", make_respond_node(deps))
     graph.add_node("tools", make_tools_node(deps))
+    graph.add_node("verify", make_verify_node(deps))
     graph.add_node("escalate", make_escalate_node(deps))
     graph.add_node("fixed_reply", fixed_reply_node)
 
@@ -40,7 +42,9 @@ def build_graph(deps: Deps, checkpointer: BaseCheckpointSaver) -> CompiledStateG
     graph.add_conditional_edges("safety", after_safety, ["router", "escalate", "fixed_reply"])
     graph.add_conditional_edges("router", after_router, ["respond", "tools", "escalate", "fixed_reply"])
     # The loop: the model asks for a tool, the tool runs, the model sees the result.
-    graph.add_conditional_edges("respond", after_respond, ["tools", END])
+    # ...and a finished clinic answer is checked against its passages before it is shown.
+    graph.add_conditional_edges("respond", after_respond, ["tools", "verify", END])
+    graph.add_edge("verify", END)
     graph.add_conditional_edges("tools", after_tools, ["respond", "fixed_reply"])
     graph.add_edge("escalate", END)
     graph.add_edge("fixed_reply", END)

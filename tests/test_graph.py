@@ -18,7 +18,7 @@ from app.checkpoint import open_checkpointer
 from app.config import get_settings
 from app.contract import Intent, SafetyVerdict
 from app.db.models import Escalation, ServiceRequest, SymptomLog
-from app.graph import nodes, respond, router
+from app.graph import nodes, respond, router, verify
 from app.graph.build import build_graph
 from app.graph.nodes import Deps
 from app.graph.router import Route
@@ -60,7 +60,7 @@ def must_not_be_called(what: str):
     return fail
 
 
-def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, language=Language.EN, intents=None, search_queries=(), reply=None):
+def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, language=Language.EN, intents=None, search_queries=(), reply=None, supported=True):
     """Replace the three model calls. Anything left as None must not be called."""
 
     async def fake_safety(llm, message):
@@ -72,6 +72,13 @@ def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, language=Language.EN, int
     monkeypatch.setattr(safety, "ask_model", fake_safety)
     monkeypatch.setattr(router, "ask_model", fake_router if intents else must_not_be_called("the router"))
     monkeypatch.setattr(respond, "ask_model", reply or must_not_be_called("the reply model"))
+
+    async def fake_check(llm, question, passages, answer):
+        if isinstance(supported, Exception):
+            raise supported
+        return verify.Grounding(supported=supported, reason="scripted")
+
+    monkeypatch.setattr(verify, "ask_model", fake_check)
 
 
 def tool_call(name: str, **args) -> AIMessage:
@@ -458,3 +465,51 @@ async def test_a_two_part_clinic_question_is_searched_once_per_part(deps, checkp
     assert numbers == list(range(1, len(numbers) + 1)) and len(numbers) > 6
     headings = re.findall(r"^\[\d+\] (.+)$", seen_by_model["text"], flags=re.M)
     assert len(headings) == len(set(headings))
+
+
+# ---------- the answer check ----------
+
+
+async def gym_answer_from_wellness_hours(llm, tools, messages):
+    return AIMessage("The gym is open 08:00 to 20:00 [1].")
+
+
+async def ask_gym(deps, checkpointer):
+    return await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "gym ka timing kya hai", patient_id="pat_016", society_id="soc_royal")
+
+
+async def test_a_supported_clinic_answer_is_shown_with_its_citation(deps, checkpointer, monkeypatch):
+    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_queries=["wellness room hours"], reply=gym_answer_from_wellness_hours, supported=True)
+
+    state = await ask_gym(deps, checkpointer)
+
+    assert reply_text(state) == "The gym is open 08:00 to 20:00 [1]."
+    assert len(state["citations"]) == 1
+
+
+async def test_an_unsupported_clinic_answer_is_replaced_by_i_dont_know(deps, checkpointer, monkeypatch):
+    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_queries=["gym timing"], reply=gym_answer_from_wellness_hours, supported=False)
+
+    state = await ask_gym(deps, checkpointer)
+
+    assert reply_text(state) == replies.dont_know(Language.EN)
+    assert state["citations"] == []
+    # The unsupported text is gone from the transcript too, not just hidden.
+    assert "08:00 to 20:00" not in "".join(str(m.content) for m in state["messages"] if isinstance(m, AIMessage))
+
+
+async def test_if_the_check_cannot_run_the_answer_is_not_shown(deps, checkpointer, monkeypatch):
+    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_queries=["gym timing"], reply=gym_answer_from_wellness_hours, supported=ConnectionError("down"))
+
+    state = await ask_gym(deps, checkpointer)
+
+    assert reply_text(state) == replies.try_again(Language.EN)
+    assert state["citations"] == []
+
+
+async def test_a_booking_reply_is_not_sent_to_the_answer_check(deps, checkpointer, monkeypatch):
+    script(monkeypatch, intents=[Intent.BOOK_SERVICE], reply=booking_assistant, supported=AssertionError("must not be checked"))
+
+    state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "book cardiology 2027-01-12 10:30")
+
+    assert reply_text(state) == "Your appointment is booked."

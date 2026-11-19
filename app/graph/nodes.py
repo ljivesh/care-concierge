@@ -25,7 +25,7 @@ from langgraph.graph import END
 from app import replies, safety
 from app.config import Settings
 from app.contract import Intent, SafetyVerdict
-from app.graph import respond, router
+from app.graph import respond, router, verify
 from app.graph.state import (
     ConciergeState,
     latest_user_text,
@@ -217,7 +217,45 @@ def make_respond_node(deps: Deps):
 
 def after_respond(state: ConciergeState) -> str:
     last = state["messages"][-1]
-    return "tools" if isinstance(last, AIMessage) and last.tool_calls else END
+    if isinstance(last, AIMessage) and last.tool_calls:
+        return "tools"
+    # A clinic answer written from passages is checked before the patient sees it.
+    # Only pure clinic questions: a booking confirmation is backed by a tool result,
+    # not by passages, and would wrongly fail the check.
+    is_clinic_answer = (
+        state["intents"] == [Intent.CLINIC_INFO.value]
+        and passages_this_turn(state["messages"])
+        and last.content != replies.dont_know(Language(state["language"]))
+        and last.content != replies.try_again(Language(state["language"]))
+    )
+    return "verify" if is_clinic_answer else END
+
+
+# ---------- verify: is the clinic answer supported by its passages? ----------
+
+
+def make_verify_node(deps: Deps):
+    async def verify_node(state: ConciergeState) -> dict:
+        reply = state["messages"][-1]
+        language = Language(state["language"])
+        passages = "\n\n".join(
+            f"[{p['n']}] {p['heading_path']}\n{p['content']}" for p in passages_this_turn(state["messages"])
+        )
+        supported = await verify.check(
+            deps.llm,
+            question=latest_user_text(state),
+            passages=passages,
+            answer=str(reply.content),
+            timeout_s=deps.settings.llm_timeout_s,
+        )
+        if supported:
+            return {}
+        # Not supported: decline. Could not check: ask them to try again. Either way the
+        # answer is replaced (same message id) and its citations dropped.
+        text = replies.dont_know(language) if supported is False else replies.try_again(language)
+        return {"messages": [AIMessage(text, id=reply.id)], "citations": []}
+
+    return verify_node
 
 
 # ---------- tools ----------
