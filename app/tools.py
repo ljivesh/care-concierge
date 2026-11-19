@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app import booking, records, scoping
 from app.booking import BookingStatus
 from app.contract import Service
+from app.corpus import merge_by_heading
 from app.embeddings import Embedder
 from app.errors import ConciergeError, ErrorCode
 
@@ -197,21 +198,23 @@ def make_tools(
     async def search_clinic_docs(query: str, society_id: str, k: int = 6) -> list[dict]:
         (query_embedding,) = await embedder.embed([query])
         async with session_factory() as session:
-            passages = await scoping.search_chunks(
+            chunks = await scoping.search_chunks(
                 session,
                 society_id=society_id,
                 query_embedding=query_embedding,
-                k=k,
+                # Table rows are small chunks of their own, so fetch twice as many
+                # and merge the ones under the same heading into one passage.
+                k=k * 2,
                 query_text=query if hybrid else None,  # None switches keyword search off
             )
-        # Abstention: if even the passage closest in meaning scores below the threshold,
+        # Abstention: if even the chunk closest in meaning scores below the threshold,
         # the question is about something the documents do not cover. Return nothing,
         # which tells the agent to say it does not know and offer a nurse.
-        if not passages or max(p["similarity"] for p in passages) < min_similarity:
+        if not chunks or max(c["similarity"] for c in chunks) < min_similarity:
             return []
-        if hybrid:
-            return passages  # keyword matches are kept even when their own similarity is low
-        return [p for p in passages if p["similarity"] >= min_similarity]
+        if not hybrid:
+            chunks = [c for c in chunks if c["similarity"] >= min_similarity]
+        return merge_by_heading(chunks)[:k]
 
     return [
         StructuredTool.from_function(

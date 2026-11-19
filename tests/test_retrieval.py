@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects import postgresql
 
 from app import scoping
-from app.corpus import chunk_by_headings, parse_document
+from app.corpus import chunk_by_headings, merge_by_heading, parse_document
 from app.db.models import DocChunk, Document
 from app.ingest import CORPUS_DIR, ingest
 from app.config import get_settings
@@ -46,10 +46,42 @@ def test_real_document_front_matter_and_citation_path():
     doc = parse_document((CORPUS_DIR / "annex-lotus-tower.md").read_text(encoding="utf-8"))
 
     assert (doc.doc_id, doc.version, doc.society_id) == ("annex-lotus-tower", 3, "soc_lotus")
-    hours = next(c for c in doc.chunks if c.heading_path.endswith("Hours"))
+    hours = [c for c in doc.chunks if c.heading_path.endswith("Hours")]
     # The exact path the bundle README gives as an example citation.
-    assert hours.heading_path == "Society Annex — Lotus Tower > Wellness room > Hours"
-    assert "Sunday | Closed" in hours.content
+    assert {c.heading_path for c in hours} == {"Society Annex — Lotus Tower > Wellness room > Hours"}
+    # One chunk for the section's sentence, then one per table row, each with the header.
+    assert hours[0].content == "Wellness room phone: +91 120 4555 3301."
+    assert "| Day | Hours |\n|---|---|\n| Sunday | Closed |" in [c.content for c in hours]
+    assert len(hours) == 5
+
+
+def test_each_table_row_is_its_own_chunk_with_the_header():
+    body = "# T\n## Tests\nintro\n\n| Code | Report in |\n|---|---|\n| CBC | 6 hours |\n| LFT | 24 hours |\n\noutro\n"
+
+    chunks = chunk_by_headings(body)
+
+    assert [(c.heading_path, c.content) for c in chunks] == [
+        ("T > Tests", "intro\n\n\noutro"),
+        ("T > Tests", "| Code | Report in |\n|---|---|\n| CBC | 6 hours |"),
+        ("T > Tests", "| Code | Report in |\n|---|---|\n| LFT | 24 hours |"),
+    ]
+
+
+def test_chunks_under_one_heading_merge_into_one_passage():
+    def chunk(heading, content, similarity, keyword=False, doc="d"):
+        return {"doc_id": doc, "version": 1, "heading_path": heading, "content": content, "similarity": similarity, "keyword_match": keyword}
+
+    merged = merge_by_heading(
+        [
+            chunk("T > Tests", "| Code | Report in |\n|---|---|\n| CBC | 6 hours |", 0.3, keyword=True),
+            chunk("T > Other", "something else", 0.5),
+            chunk("T > Tests", "| Code | Report in |\n|---|---|\n| LFT | 24 hours |", 0.6),
+        ]
+    )
+
+    assert [p["heading_path"] for p in merged] == ["T > Tests", "T > Other"]  # order first found
+    assert merged[0]["content"] == "| Code | Report in |\n|---|---|\n| CBC | 6 hours |\n| LFT | 24 hours |"
+    assert merged[0]["similarity"] == 0.6 and merged[0]["keyword_match"] is True
 
 
 # ---------- ingestion ----------
@@ -61,7 +93,7 @@ async def test_ingest_marks_the_superseded_version(session_factory):
         chunk_count = await session.scalar(select(func.count()).select_from(DocChunk))
 
     assert len(docs) == 10
-    assert chunk_count == 78
+    assert chunk_count == 123  # 78 heading sections, with every table row as its own chunk
     coverage = {d.version: d.is_current for d in docs if d.doc_id == "plan-coverage"}
     assert coverage == {1: False, 2: True}
     assert all(d.is_current for d in docs if d.doc_id != "plan-coverage")
@@ -103,11 +135,23 @@ def test_hybrid_search_reads_only_from_the_filtered_set():
     assert "FULL OUTER JOIN" in sql
 
 
+async def test_a_table_row_is_found_on_its_own_by_dense_search(session_factory, embedder):
+    """Before rows were chunks, the whole nine-test table was one embedding and this missed."""
+    (vector,) = await embedder.embed(["HbA1c report time"])
+
+    async with session_factory() as session:
+        dense = await scoping.search_chunks(session, society_id="soc_royal", query_embedding=vector, k=6)
+
+    assert dense[0]["doc_id"] == "department-directory"
+    assert "| `HBA1C` | HbA1c (glycated haemoglobin) | Blood (EDTA) | No | 24 hours |" in dense[0]["content"]
+
+
 @pytest.mark.parametrize(
     "query, society_id, document, fact",
     [
-        # One row of a table in the directory: "HBA1C ... 24 hours".
-        ("HbA1c report time", "soc_royal", "department-directory", "| `HBA1C` | HbA1c (glycated haemoglobin) | Blood (EDTA) | No | 24 hours |"),
+        # The router's own wording for "CBC ki report kitni der mein aati hai". The row says
+        # "Report in ... 6 hours"; nothing in it says "turnaround", so meaning alone misses it.
+        ("CBC report turnaround time", "soc_lotus", "department-directory", "| `CBC` | Complete Blood Count | Blood (EDTA) | No | 6 hours |"),
         # One bullet in the Lotus Tower annex.
         ("dietitian teleconsultation covered", "soc_lotus", "annex-lotus-tower", "**Dietitian teleconsultation:** 4 per resident per plan year are covered."),
     ],
@@ -115,13 +159,12 @@ def test_hybrid_search_reads_only_from_the_filtered_set():
 async def test_questions_dense_search_gets_wrong_and_hybrid_gets_right(
     session_factory, embedder, query, society_id, document, fact
 ):
-    (vector,) = await embedder.embed([query])
+    settings = get_settings()
+    dense_tools = make_tools(session_factory, embedder, min_similarity=settings.retrieval_min_similarity, hybrid=False)
+    hybrid_tools = make_tools(session_factory, embedder, min_similarity=settings.retrieval_min_similarity)
 
-    async with session_factory() as session:
-        dense = await scoping.search_chunks(session, society_id=society_id, query_embedding=vector, k=6)
-        hybrid = await scoping.search_chunks(
-            session, society_id=society_id, query_embedding=vector, k=6, query_text=query
-        )
+    dense = await search(dense_tools, query, society_id)
+    hybrid = await search(hybrid_tools, query, society_id)
 
     assert not any(fact in p["content"] for p in dense)  # dense alone never surfaces the fact
     found = next(p for p in hybrid if fact in p["content"])

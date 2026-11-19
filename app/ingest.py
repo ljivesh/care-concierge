@@ -21,7 +21,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import get_settings
-from app.corpus import CorpusDocument, parse_document
+from app.corpus import CHUNKER_VERSION, CorpusDocument, parse_document
 from app.db.models import DocChunk, Document
 from app.db.session import make_engine, make_session_factory
 from app.embeddings import Embedder
@@ -42,7 +42,11 @@ async def ingest(
     force: bool = False,
 ) -> dict:
     files = {path.name: path.read_text(encoding="utf-8") for path in sorted(corpus_dir.glob("*.md"))}
-    hashes = {name: hashlib.sha256(text.encode()).hexdigest() for name, text in files.items()}
+    # The chunker's version is part of the hash, so a change to how files are
+    # chunked re-ingests them even though their text is the same.
+    hashes = {
+        name: hashlib.sha256(f"{CHUNKER_VERSION}\n{text}".encode()).hexdigest() for name, text in files.items()
+    }
 
     async with session_factory() as session:
         stored = dict((await session.execute(select(Document.source_path, Document.source_sha256))).all())
