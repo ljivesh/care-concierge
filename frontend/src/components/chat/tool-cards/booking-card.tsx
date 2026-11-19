@@ -1,4 +1,4 @@
-import { CalendarCheck, Clock, FlaskConical, Stethoscope } from "lucide-react";
+import { CalendarCheck, CalendarSync, CalendarX, Clock, FlaskConical, Stethoscope } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatSlot, subtypeLabel } from "@/lib/helpers/format";
 import type { Booking } from "@/lib/types/tools";
@@ -23,17 +23,43 @@ export function BookingRow({ booking }: { booking: Booking }) {
           {time}
         </p>
       </div>
-      <Badge variant={booking.status === "BOOKED" ? "default" : "secondary"}>{booking.status.toLowerCase()}</Badge>
+      <Badge variant={booking.status === "BOOKED" ? "default" : "secondary"}>
+        {booking.status.toLowerCase().replace("_", "-")}
+      </Badge>
     </div>
   );
 }
 
+/** What happened to the booking, as the card's title. */
+function headline(booking: Booking) {
+  if (booking.cancelled || booking.already_cancelled) {
+    return {
+      icon: CalendarX,
+      text: booking.late_cancellation ? "Cancelled late: counts as a no-show" : "Appointment cancelled",
+      tone: "text-muted-foreground",
+    };
+  }
+  if (booking.rescheduled) {
+    const was = booking.previous_scheduled_for ? formatSlot(booking.previous_scheduled_for) : null;
+    return {
+      icon: CalendarSync,
+      text: was ? `Appointment moved from ${was.date}, ${was.time}` : "Appointment moved",
+      tone: "text-primary",
+    };
+  }
+  if (booking.already_booked || booking.unchanged) {
+    return { icon: CalendarCheck, text: "You already have this appointment", tone: "text-primary" };
+  }
+  return { icon: CalendarCheck, text: "Appointment booked", tone: "text-primary" };
+}
+
 export function BookingCard({ booking }: { booking: Booking }) {
+  const { icon: Icon, text, tone } = headline(booking);
   return (
     <div className="space-y-3 rounded-xl border bg-card p-4">
-      <p className="flex items-center gap-2 font-medium text-primary text-sm">
-        <CalendarCheck className="size-4" />
-        {booking.already_booked ? "You already have this appointment" : "Appointment booked"}
+      <p className={`flex items-center gap-2 font-medium text-sm ${tone}`}>
+        <Icon className="size-4" />
+        {text}
       </p>
       <BookingRow booking={booking} />
     </div>

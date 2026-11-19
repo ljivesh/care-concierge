@@ -1,4 +1,5 @@
-"""The LangChain tools: the five fixed by the contract, plus find_available_slots.
+"""The LangChain tools: the five fixed by the contract, plus three added for a usable
+product: find_available_slots, cancel_service_request and reschedule_service_request.
 
 Three ideas in this file:
 
@@ -63,7 +64,7 @@ class BookServiceArgs(BaseModel):
 
 class FindAvailableSlotsArgs(BaseModel):
     """Not one of the five contract tools. Added so the concierge can show free slots
-    instead of making the patient guess a time (see README, "Beyond the brief")."""
+    instead of making the patient guess a time."""
 
     patient_id: PatientId
     service: Service = Field(description="DOCTOR for a consultation or physiotherapy, LAB for a lab test.")
@@ -71,6 +72,26 @@ class FindAvailableSlotsArgs(BaseModel):
     start: date | None = Field(
         default=None,
         description="First day to look at, as YYYY-MM-DD. Leave empty to start from today.",
+    )
+
+
+class CancelServiceRequestArgs(BaseModel):
+    patient_id: PatientId
+    service_request_id: uuid.UUID = Field(
+        description="The id of the booking to cancel, exactly as returned by list_service_requests."
+    )
+
+
+class RescheduleServiceRequestArgs(BaseModel):
+    patient_id: PatientId
+    service_request_id: uuid.UUID = Field(
+        description="The id of the booking to move, exactly as returned by list_service_requests."
+    )
+    scheduled_for: datetime = Field(
+        description=(
+            "The new slot start as local date and time, e.g. 2027-01-12T10:30. Use only a date and "
+            "time the patient stated or chose from offered slots."
+        )
     )
 
 
@@ -137,6 +158,16 @@ def make_tools(
             session_factory, patient_id=patient_id, service=service, subtype=subtype, start=start
         )
 
+    async def cancel_service_request(patient_id: str, service_request_id: uuid.UUID) -> dict:
+        return await booking.cancel(session_factory, patient_id=patient_id, booking_id=service_request_id)
+
+    async def reschedule_service_request(
+        patient_id: str, service_request_id: uuid.UUID, scheduled_for: datetime
+    ) -> dict:
+        return await booking.reschedule(
+            session_factory, patient_id=patient_id, booking_id=service_request_id, scheduled_for=scheduled_for
+        )
+
     async def list_service_requests(patient_id: str, status: BookingStatus | None = None) -> list[dict]:
         async with session_factory() as session:
             patient = await scoping.get_patient(session, patient_id)
@@ -197,6 +228,18 @@ def make_tools(
                 "Read-only. Use it when the patient asks what times are available."
             ),
             args_schema=FindAvailableSlotsArgs,
+        ),
+        StructuredTool.from_function(
+            coroutine=cancel_service_request,
+            name="cancel_service_request",
+            description="Cancel one of the patient's bookings, identified by its id.",
+            args_schema=CancelServiceRequestArgs,
+        ),
+        StructuredTool.from_function(
+            coroutine=reschedule_service_request,
+            name="reschedule_service_request",
+            description="Move one of the patient's bookings to another slot with the same clinician.",
+            args_schema=RescheduleServiceRequestArgs,
         ),
         StructuredTool.from_function(
             coroutine=list_service_requests,

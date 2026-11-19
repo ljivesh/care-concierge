@@ -10,6 +10,13 @@ export interface Booking {
   status: string;
   /** True when the patient asked again for an appointment they already hold. */
   already_booked?: boolean;
+  /** Set by cancel_service_request and reschedule_service_request. */
+  cancelled?: boolean;
+  already_cancelled?: boolean;
+  late_cancellation?: boolean;
+  rescheduled?: boolean;
+  unchanged?: boolean;
+  previous_scheduled_for?: string;
 }
 
 export interface SymptomLog {

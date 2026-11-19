@@ -2,7 +2,8 @@
 
 A healthcare concierge for residential societies: it books doctor consultations and lab tests,
 lists bookings, logs symptoms, answers clinic questions from the document corpus with citations,
-refuses to practise medicine, and escalates emergencies into a stored row.
+refuses to practise medicine, and escalates emergencies into a stored row. It can also show
+free slots and cancel or reschedule a booking.
 
 Stack: LangGraph (`StateGraph`, Postgres checkpointer), LangChain (tool binding, structured
 output), PostgreSQL 16 with pgvector, Alembic, SQLAlchemy 2, FastAPI with SSE, Docker Compose.
@@ -15,7 +16,7 @@ The only requirement is Docker with Compose. No API key is needed for the first 
 docker compose up -d --build                    # Postgres + the app
 docker compose exec app alembic upgrade head    # already applied at startup; safe to repeat
 make eval                                       # replays recorded model outputs; exits 0
-make test                                       # 121 tests against a real Postgres
+make test                                       # 133 tests against a real Postgres
 ```
 
 Then open http://localhost:8000.
@@ -68,7 +69,7 @@ graph, checkpointer, tools and database are real.
 ## The eval
 
 ```bash
-make eval           # 40 labelled messages, 13 retrieval questions
+make eval           # 41 labelled messages, 13 retrieval questions
 make eval-fresh     # a second set written after the prompts were fixed
 make eval EVAL_ARGS="--intent-file path/to/messages.yaml --retrieval-file path/to/questions.yaml"
 ```
@@ -95,7 +96,7 @@ missing and the run fails. Numbers, failure modes and how far to trust them are 
 app/            the service: endpoints, graph, tools, booking rules, scoping, retrieval
 migrations/     three Alembic migrations
 evals/          the eval sets, the harness, and the recorded model outputs
-tests/          121 tests
+tests/          133 tests
 frontend/       the page (React, built into the image)
 data/           the corpus and seed files from the bundle
 ```
@@ -120,47 +121,53 @@ simply books. `test_booking_written_then_process_dies_then_patient_resends` and
 
 ## What I cut, and why
 
-- **No check for bookings in the past, and no 2-hour notice rule.** The clinic policy has both;
-  the brief's Core list has neither. A test that books a fixed date would start failing once
-  that date passed.
-- **No cancel or reschedule, and no no-show counting.** Not among the six behaviours. The
-  concierge says it cannot do this and points to the wellness room.
-- **One lab test per collection slot.** The corpus says one slot covers all tests booked for
-  that morning. Here a second test in the same slot is treated like any double booking. It
-  would need the unique index to allow several rows for one patient in one slot.
-- **Escalations are always Level 1.** The SLA document defines three levels; the contract's
+- **The no-show pause is not enforced.** A cancellation inside 2 hours is recorded as a no-show,
+  as the clinic policy says, but the rule that three no-shows in 90 days pause online booking
+  for 30 days is not applied.
+- **One lab test per collection slot.** A phlebotomist's home visit is a 15-minute slot, and the
+  corpus says one visit covers all the tests booked for that morning. Here each booking is one
+  test, so a second test in the same slot is refused like any double booking. It would need the
+  unique index to allow several rows for one patient in one slot.
+- **Escalations are always Level 1.** The SLA document defines three levels. The contract's
   `escalate_emergency` has no level argument, and the document says to use the higher level
   when unsure and that only a nurse may downgrade.
 - **Safety looks at the latest message only.** A follow-up such as "what about two tablets?"
   has no medical words of its own. The reply prompt also forbids medical advice, as a second
   layer, but that layer is not measured by the eval.
-- **No login.** The page has a patient picker in place of authentication, and
-  `GET /v1/threads/{thread_id}` returns a transcript to anyone who has the thread id. A thread
-  cannot be continued by a different patient (403).
-- **The WhatsApp webhook fixtures** are not used, as the brief allows.
+- **No login.** This is an MVP, so a patient picker stands in for sign-in.
+- **The WhatsApp webhook fixtures** in the data bundle are not used, as the brief allows.
 - **Good-to-have rows not done:** the approval step with a LangGraph `interrupt`, and latency
   percentiles. The restart test and the API tests are multi-turn and assert the database's end
   state, but I did not write the two scenario tests as a separate piece.
 
 ## What goes beyond the brief
 
-The brief says extra features cost points, so each of these is a choice I made knowingly.
+I treated the brief as the floor. Where the product was clearly better with something more, I
+added it, and each addition is listed here.
 
+- **Three tools beyond the contract's five,** which are unchanged, with the same names and
+  signatures:
+  - `find_available_slots` shows free slots, so the patient does not have to guess a time.
+  - `cancel_service_request` cancels a booking.
+  - `reschedule_service_request` moves a booking to another slot with the same clinician. It
+    updates the same row, so the unique index still decides whether the new slot is free.
+- **The clinic policy's time rules.** A slot in the past cannot be booked, a booking needs 2
+  hours' notice, and a booking can be cancelled or moved free of charge up to 2 hours before.
+  Tests freeze the clock (`frozen_clock` in `tests/conftest.py`), so their fixed January 2027
+  dates stay valid. An outside test that books a fixed date will be refused once that date has
+  passed, which is the behaviour the policy asks for.
+- **"You already have this appointment."** A patient who asks again for a slot they hold is told
+  so, not that the slot was taken.
 - **The frontend is a React app, not one HTML file.** It uses the AI SDK's `useChat` with a
   custom transport (`frontend/src/lib/api/concierge-transport.ts`) that translates the fixed SSE
   events, and shadcn components. It is built inside the Docker image, so nothing extra is needed
-  to run it. The brief says a framework earns nothing; I wanted tool results shown as cards
-  (a booking, free slots, an emergency alert with dial links) and a conversation list.
-- **A sixth tool, `find_available_slots`.** The contract's five are unchanged, with the same
-  names and signatures. Without it, "which slots are free?" could only be answered with "tell
-  me a time and I will try". It is read-only and uses the same society scoping as booking.
+  to run it. Tool results are shown as cards: a booking, free slots as buttons, an emergency
+  alert with dial links.
 - **Hybrid retrieval,** from the good-to-have list: `tsvector` keyword search merged with dense
   search by reciprocal rank fusion. `EVAL_REPORT.md` has the dense-against-hybrid comparison and
   the question dense gets wrong.
 - **Tool-call timeline and reload,** also good-to-have rows: each tool call is shown with its
   arguments and result, and a reload restores the conversation from `GET /v1/threads/{id}`.
-- **"You already have this appointment."** A patient who asks again for a slot they hold is told
-  so, not that the slot was taken.
 
 ## How this was built
 

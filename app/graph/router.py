@@ -19,8 +19,9 @@ understand it: if the assistant just asked for a date, a time or a severity and 
 answering, the intent is the one that question belongs to.
 
 Intents:
-- BOOK_SERVICE: wants to book a doctor consultation or a lab test, is giving details for one, \
-or asks which slots or times are free for one.
+- BOOK_SERVICE: anything that makes or changes a booking. Wants to book a doctor consultation or \
+a lab test, is giving details for one, asks which slots or times are free for one, or wants to \
+cancel or reschedule a booking they have.
 - LIST_SERVICES: wants to see their own bookings or appointments.
 - LOG_SYMPTOM: is telling us a symptom so the care team knows, or giving its severity.
 - CLINIC_INFO: asks about the clinic or their plan: opening hours, what is covered, fees, which \
@@ -30,9 +31,8 @@ test, contacts, policies. Asking what the clinic offers or recommends buying is 
 whether to change a medicine, what a result means, or whether their symptoms need a test or treatment.
 - EMERGENCY: describes something happening now that may need urgent medical help.
 - SMALL_TALK: only a greeting, thanks, goodbye or pleasantry.
-- UNKNOWN: unclear; or an action the concierge does not do (cancelling or rescheduling a booking, \
-complaints, billing disputes); or a question that has nothing to do with the clinic or the \
-patient's health.
+- UNKNOWN: unclear; or an action the concierge does not do (complaints, billing disputes, \
+refunds); or a question that has nothing to do with the clinic or the patient's health.
 
 A symptom that is clearly over and is mentioned only as the reason for a booking is BOOK_SERVICE.
 

@@ -7,6 +7,7 @@ ingests the corpus.
 
 import asyncio
 import os
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -76,3 +77,13 @@ async def checkpointer():
     """The real Postgres checkpointer, on the test database."""
     async with open_checkpointer(get_settings()) as saver:
         yield saver
+
+
+@pytest.fixture(autouse=True)
+def frozen_clock(monkeypatch):
+    """Tests book fixed dates in January 2027. Freezing "now" a week earlier keeps
+    them valid whenever they are run, despite the past-date and 2-hour rules."""
+    from app import booking
+
+    monday_before = datetime(2027, 1, 4, 9, 0)
+    monkeypatch.setattr(booking, "current_time", lambda tz: monday_before.replace(tzinfo=tz))

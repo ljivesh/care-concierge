@@ -13,6 +13,9 @@ const TITLES: Record<string, string> = {
   SLOT_TAKEN: "That slot was just taken",
   NOT_A_SLOT: "No slot at that time",
   NOT_OFFERED_AT_SOCIETY: "Not offered at your society",
+  PAST_SLOT: "That time has already passed",
+  TOO_SOON: "That is less than 2 hours away",
+  TOO_LATE_TO_CHANGE: "Too close to the appointment to change it",
 };
 
 /** A tool call the server refused. Free slots, when offered, are one tap away. */
@@ -24,6 +27,9 @@ export function ToolErrorCard({ error, onSuggest }: Props) {
       <AlertTitle>{TITLES[error.code] ?? "That did not go through"}</AlertTitle>
       <AlertDescription className="space-y-3">
         {suggestions.length === 0 && <p>{error.message}</p>}
+        {error.code === "TOO_SOON" && suggestions.length > 0 && (
+          <p>Bookings need 2 hours' notice. For anything sooner, call your wellness room.</p>
+        )}
         {suggestions.length > 0 && (
           <>
             <p>Free slots with {suggestions[0].clinician_name}:</p>

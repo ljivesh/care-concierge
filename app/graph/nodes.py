@@ -47,6 +47,8 @@ TOOLS_FOR_INTENT = {
         "book_service",
         "find_available_slots",
         "list_service_requests",
+        "cancel_service_request",
+        "reschedule_service_request",
         "search_clinic_docs",
     },
     Intent.LIST_SERVICES.value: {"list_service_requests"},

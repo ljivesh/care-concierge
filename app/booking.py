@@ -1,4 +1,4 @@
-"""Booking rules: the slot grid, picking the clinician, and writing the row.
+"""Booking rules: the slot grid, picking the clinician, and writing, moving or cancelling the row.
 
 Python decides whether a request makes sense (known subtype, a real slot).
 The DATABASE decides who wins a slot: we just INSERT and let the partial
@@ -25,6 +25,15 @@ SUGGESTION_DAYS = 14  # how far ahead to look for free slots to offer
 SUGGESTION_LIMIT = 3
 SLOT_LIST_DAYS = 14  # how far ahead find_available_slots looks
 SLOT_LIST_LIMIT = 12
+# From the clinic policy: a booking needs 2 hours' notice, and can be cancelled or
+# rescheduled free of charge up to 2 hours before the slot.
+NOTICE = timedelta(hours=2)
+WELLNESS_ROOM = "please call your wellness room"
+
+
+def current_time(tz: ZoneInfo) -> datetime:
+    """The clock, in one place, so tests can set it."""
+    return datetime.now(tz)
 
 
 class BookingStatus(str, Enum):
@@ -76,13 +85,15 @@ async def _free_slots_near(
     clinician: Clinician,
     tz: ZoneInfo,
     wanted: datetime,
+    earliest: datetime,
 ) -> list[dict]:
-    """The free slots closest to the requested time, same clinician, from that day on."""
-    first_day = wanted.date()
+    """The free slots closest to the requested time, same clinician, none before `earliest`."""
+    first_day = max(wanted, earliest).date()
     grid = [
         slot
         for offset in range(SUGGESTION_DAYS)
         for slot in slots_on(clinician, society_id, first_day + timedelta(days=offset), tz)
+        if slot >= earliest
     ]
     if not grid:
         return []
@@ -96,6 +107,24 @@ async def _free_slots_near(
     free = [slot for slot in grid if slot not in taken and slot != wanted]
     nearest = sorted(free, key=lambda slot: abs(slot - wanted))[:SUGGESTION_LIMIT]
     return [_slot(clinician, slot) for slot in sorted(nearest)]
+
+
+def _refuse_if_too_early(wanted: datetime, now: datetime, suggestions: list[dict]) -> None:
+    """A slot in the past, or less than 2 hours away, cannot be booked here."""
+    if wanted <= now:
+        raise ConciergeError(
+            ErrorCode.PAST_SLOT,
+            _with_suggestions(f"{_fmt(wanted)} has already passed.", suggestions),
+            suggestions,
+        )
+    if wanted < now + NOTICE:
+        raise ConciergeError(
+            ErrorCode.TOO_SOON,
+            _with_suggestions(
+                f"Bookings need at least 2 hours' notice. For {_fmt(wanted)}, {WELLNESS_ROOM}.", suggestions
+            ),
+            suggestions,
+        )
 
 
 def _with_suggestions(sentence: str, suggestions: list[dict]) -> str:
@@ -140,7 +169,8 @@ async def available_slots(
 ) -> list[dict]:
     """Upcoming free slots for a department or test at the patient's society, soonest first.
 
-    Looks SLOT_LIST_DAYS ahead from `start` (today if not given) and never offers a slot in the past.
+    Looks SLOT_LIST_DAYS ahead from `start` (today if not given). Slots in the past, or less
+    than 2 hours away, are not offered.
     """
     async with session_factory() as session:
         patient = await scoping.get_patient(session, patient_id)
@@ -150,7 +180,8 @@ async def available_slots(
         tz = ZoneInfo(society.timezone)
         clinicians = await _clinicians_or_refuse(session, society, service, subtype)
 
-        now = (now or datetime.now(tz)).astimezone(tz)
+        now = (now or current_time(tz)).astimezone(tz)
+        earliest = now + NOTICE  # nothing sooner can be booked, so nothing sooner is offered
         first_day = max(start or now.date(), now.date())
         free: list[tuple[datetime, Clinician]] = []
         for clinician in clinicians:
@@ -158,7 +189,7 @@ async def available_slots(
                 slot
                 for offset in range(SLOT_LIST_DAYS)
                 for slot in slots_on(clinician, society.id, first_day + timedelta(days=offset), tz)
-                if slot > now
+                if slot >= earliest
             ]
             if not grid:
                 continue
@@ -215,11 +246,19 @@ async def book(
 
         clinicians = await _clinicians_or_refuse(session, society, service, subtype)
 
+        now = current_time(tz)
+        earliest = now + NOTICE
+        if wanted < earliest:
+            suggestions = await _free_slots_near(
+                session, society_id=society_id, clinician=clinicians[0], tz=tz, wanted=wanted, earliest=earliest
+            )
+            _refuse_if_too_early(wanted, now, suggestions)
+
         # Keep only clinicians for whom the requested time is a real slot start.
         on_grid = [c for c in clinicians if wanted in slots_on(c, society_id, wanted.date(), tz)]
         if not on_grid:
             suggestions = await _free_slots_near(
-                session, society_id=society_id, clinician=clinicians[0], tz=tz, wanted=wanted
+                session, society_id=society_id, clinician=clinicians[0], tz=tz, wanted=wanted, earliest=earliest
             )
             raise ConciergeError(
                 ErrorCode.NOT_A_SLOT,
@@ -276,7 +315,7 @@ async def book(
 
     async with session_factory() as session:
         suggestions = await _free_slots_near(
-            session, society_id=society_id, clinician=on_grid[0], tz=tz, wanted=wanted
+            session, society_id=society_id, clinician=on_grid[0], tz=tz, wanted=wanted, earliest=earliest
         )
     raise ConciergeError(
         ErrorCode.SLOT_TAKEN,
@@ -285,3 +324,128 @@ async def book(
         ),
         suggestions,
     )
+
+
+# ---------- changing a booking ----------
+
+
+async def _own_booking(session: AsyncSession, patient_id: str, booking_id: uuid.UUID):
+    """The patient, their society, and the booking row, locked for this transaction.
+    The row is looked up by the patient's own id and society, so a booking id that
+    belongs to someone else is simply "not found"."""
+    patient = await scoping.get_patient(session, patient_id)
+    if patient is None:
+        raise ConciergeError(ErrorCode.PATIENT_NOT_FOUND, "We could not find that patient.")
+    society = await session.get(Society, patient.society_id)
+    row = await session.scalar(
+        select(ServiceRequest)
+        .where(
+            ServiceRequest.id == booking_id,
+            ServiceRequest.patient_id == patient_id,
+            ServiceRequest.society_id == patient.society_id,
+        )
+        .with_for_update()
+    )
+    if row is None:
+        raise ConciergeError(ErrorCode.BOOKING_NOT_FOUND, "We could not find that booking.")
+    clinician = await session.get(Clinician, row.clinician_id)
+    return society, row, clinician
+
+
+async def cancel(
+    session_factory: async_sessionmaker[AsyncSession], *, patient_id: str, booking_id: uuid.UUID
+) -> dict:
+    """Cancel one of the patient's bookings. Cancelling twice is harmless.
+
+    Up to 2 hours before the slot it is free. Later than that it still frees the
+    slot, but the policy counts it as a no-show, and the result says so.
+    """
+    async with session_factory() as session, session.begin():
+        society, row, clinician = await _own_booking(session, patient_id, booking_id)
+        tz = ZoneInfo(society.timezone)
+        if row.status in (BookingStatus.CANCELLED.value, BookingStatus.NO_SHOW.value):
+            return {**scoping.booking_to_dict(row, clinician.name, society.timezone), "already_cancelled": True}
+        now = current_time(tz)
+        if row.status != BookingStatus.BOOKED.value or row.scheduled_for <= now:
+            raise ConciergeError(ErrorCode.NOT_ACTIVE, "That appointment has already taken place.")
+
+        late = row.scheduled_for < now + NOTICE
+        row.status = (BookingStatus.NO_SHOW if late else BookingStatus.CANCELLED).value
+        return {
+            **scoping.booking_to_dict(row, clinician.name, society.timezone),
+            "cancelled": True,
+            "late_cancellation": late,  # True: inside the 2-hour window, counted as a no-show
+        }
+
+
+async def reschedule(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    patient_id: str,
+    booking_id: uuid.UUID,
+    scheduled_for: datetime,
+) -> dict:
+    """Move one of the patient's bookings to another slot with the same clinician.
+
+    The same row is updated, so the unique index still decides whether the new
+    slot is free, and asking for the same move twice changes nothing.
+    """
+    try:
+        async with session_factory() as session, session.begin():
+            society, row, clinician = await _own_booking(session, patient_id, booking_id)
+            tz = ZoneInfo(society.timezone)
+            now = current_time(tz)
+            earliest = now + NOTICE
+            wanted = scheduled_for.replace(tzinfo=tz) if scheduled_for.tzinfo is None else scheduled_for.astimezone(tz)
+            previous = row.scheduled_for.astimezone(tz)
+
+            if row.status != BookingStatus.BOOKED.value:
+                raise ConciergeError(ErrorCode.NOT_ACTIVE, "That booking is no longer active, so it cannot be moved.")
+            if wanted == previous:
+                return {**scoping.booking_to_dict(row, clinician.name, society.timezone), "unchanged": True}
+            if previous < earliest:
+                raise ConciergeError(
+                    ErrorCode.TOO_LATE_TO_CHANGE,
+                    f"This appointment is less than 2 hours away, so it can no longer be moved here. "
+                    f"To change it, {WELLNESS_ROOM}.",
+                )
+
+            async def suggestions() -> list[dict]:
+                return await _free_slots_near(
+                    session, society_id=society.id, clinician=clinician, tz=tz, wanted=wanted, earliest=earliest
+                )
+
+            if wanted < earliest:
+                _refuse_if_too_early(wanted, now, await suggestions())
+            if wanted not in slots_on(clinician, society.id, wanted.date(), tz):
+                offered = await suggestions()
+                raise ConciergeError(
+                    ErrorCode.NOT_A_SLOT,
+                    _with_suggestions(f"{clinician.name} has no slot starting at {_fmt(wanted)}.", offered),
+                    offered,
+                )
+
+            # Plain values, kept for the error path: once the UPDATE is rejected the
+            # transaction is rolled back and these objects can no longer be read.
+            society_id, clinician_id = society.id, clinician.id
+            row.scheduled_for = wanted
+            await session.flush()  # sends the UPDATE; the slot index rejects it if the slot is held
+            return {
+                **scoping.booking_to_dict(row, clinician.name, society.timezone),
+                "rescheduled": True,
+                "previous_scheduled_for": previous.isoformat(),
+            }
+    except IntegrityError as exc:
+        if violated_constraint(exc) != UQ_ACTIVE_SLOT:
+            raise
+        async with session_factory() as session:
+            clinician = await session.get(Clinician, clinician_id)
+            offered = await _free_slots_near(
+                session, society_id=society_id, clinician=clinician, tz=tz, wanted=wanted, earliest=earliest
+            )
+            name = clinician.name
+        raise ConciergeError(
+            ErrorCode.SLOT_TAKEN,
+            _with_suggestions(f"The {_fmt(wanted)} slot with {name} is already taken.", offered),
+            offered,
+        ) from exc

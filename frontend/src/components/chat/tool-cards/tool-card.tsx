@@ -20,6 +20,8 @@ import {
 const RUNNING_LABEL: Record<string, string> = {
   book_service: "Booking your appointment",
   find_available_slots: "Checking free slots",
+  cancel_service_request: "Cancelling your appointment",
+  reschedule_service_request: "Moving your appointment",
   list_service_requests: "Looking up your bookings",
   log_symptom: "Noting your symptom",
   search_clinic_docs: "Searching the clinic documents",

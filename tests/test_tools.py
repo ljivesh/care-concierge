@@ -67,7 +67,9 @@ def test_model_cannot_see_or_set_patient_id_and_request_id(tools):
 def test_contract_names_and_enum(tools):
     assert [t.name for t in tools] == [
         "book_service",
-        "find_available_slots",  # the one addition beyond the contract's five
+        "find_available_slots",  # these three are additions beyond the contract's five
+        "cancel_service_request",
+        "reschedule_service_request",
         "list_service_requests",
         "log_symptom",
         "search_clinic_docs",

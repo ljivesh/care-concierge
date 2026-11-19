@@ -236,13 +236,13 @@ async def test_a_booked_slot_is_not_offered(session_factory):
 
 
 async def test_slots_in_the_past_are_not_offered(session_factory):
-    after_the_first_slot = datetime(2027, 1, 12, 10, 5, tzinfo=IST)
+    after_both_slots = datetime(2027, 1, 12, 11, 0, tzinfo=IST)
 
     slots = await available_slots(
-        session_factory, patient_id="pat_001", service=Service.DOCTOR, subtype="CARDIOLOGY", now=after_the_first_slot
+        session_factory, patient_id="pat_001", service=Service.DOCTOR, subtype="CARDIOLOGY", now=after_both_slots
     )
 
-    assert slots[0]["scheduled_for"] == "2027-01-12T10:30:00+05:30"
+    assert slots[0]["scheduled_for"] == "2027-01-19T10:00:00+05:30"
 
 
 async def test_free_slots_can_start_from_a_later_day(session_factory):
@@ -290,3 +290,165 @@ async def test_a_cancelled_booking_of_ones_own_does_not_count_as_already_booked(
     again = await book(session_factory, **cardiology("pat_001"))
 
     assert again["id"] != first["id"] and "already_booked" not in again
+
+
+# ---------- the clock: past slots and the 2-hour notice rule ----------
+
+from datetime import timedelta  # noqa: E402
+
+from app import booking as booking_module  # noqa: E402
+from app.booking import cancel, reschedule  # noqa: E402
+
+
+def set_clock(monkeypatch, when: datetime) -> None:
+    monkeypatch.setattr(booking_module, "current_time", lambda tz: when.astimezone(tz))
+
+
+async def test_a_slot_in_the_past_is_refused(session_factory, monkeypatch):
+    set_clock(monkeypatch, TUESDAY_1030 + timedelta(days=1))
+
+    with pytest.raises(ConciergeError) as refused:
+        await book(session_factory, **cardiology("pat_001"))
+
+    assert refused.value.code == ErrorCode.PAST_SLOT
+    assert refused.value.suggestions[0]["scheduled_for"] == "2027-01-19T10:00:00+05:30"  # next Tuesday
+    assert await count_bookings(session_factory) == 0
+
+
+async def test_a_slot_less_than_two_hours_away_is_refused(session_factory, monkeypatch):
+    set_clock(monkeypatch, TUESDAY_1030 - timedelta(minutes=90))
+
+    with pytest.raises(ConciergeError) as refused:
+        await book(session_factory, **cardiology("pat_001"))
+
+    assert refused.value.code == ErrorCode.TOO_SOON
+    assert "2 hours" in refused.value.message and "wellness room" in refused.value.message
+    assert await count_bookings(session_factory) == 0
+
+
+async def test_exactly_two_hours_away_is_allowed(session_factory, monkeypatch):
+    set_clock(monkeypatch, TUESDAY_1030 - timedelta(hours=2))
+
+    assert (await book(session_factory, **cardiology("pat_001")))["status"] == "BOOKED"
+
+
+async def test_a_repeated_request_is_still_answered_after_the_slot_has_passed(session_factory, monkeypatch):
+    request = cardiology("pat_001")
+    first = await book(session_factory, **request)
+    set_clock(monkeypatch, TUESDAY_1030 + timedelta(days=1))
+
+    assert await book(session_factory, **request) == first
+
+
+async def test_free_slots_leave_out_anything_less_than_two_hours_away(session_factory):
+    at_0830 = datetime(2027, 1, 12, 8, 30, tzinfo=IST)  # 10:00 is 90 minutes away, 10:30 is 2 hours
+
+    slots = await available_slots(
+        session_factory, patient_id="pat_001", service=Service.DOCTOR, subtype="CARDIOLOGY", now=at_0830
+    )
+
+    assert slots[0]["scheduled_for"] == "2027-01-12T10:30:00+05:30"
+
+
+# ---------- cancelling ----------
+
+
+async def test_cancel_frees_the_slot_for_someone_else(session_factory):
+    mine = await book(session_factory, **cardiology("pat_001"))
+
+    cancelled = await cancel(session_factory, patient_id="pat_001", booking_id=uuid.UUID(mine["id"]))
+    theirs = await book(session_factory, **cardiology("pat_002"))
+
+    assert cancelled["status"] == "CANCELLED" and cancelled["late_cancellation"] is False
+    assert theirs["patient_id"] == "pat_002"
+
+
+async def test_cancel_twice_is_harmless(session_factory):
+    mine = await book(session_factory, **cardiology("pat_001"))
+    await cancel(session_factory, patient_id="pat_001", booking_id=uuid.UUID(mine["id"]))
+
+    again = await cancel(session_factory, patient_id="pat_001", booking_id=uuid.UUID(mine["id"]))
+
+    assert again["already_cancelled"] is True and again["status"] == "CANCELLED"
+
+
+async def test_cancel_inside_two_hours_counts_as_a_no_show(session_factory, monkeypatch):
+    mine = await book(session_factory, **cardiology("pat_001"))
+    set_clock(monkeypatch, TUESDAY_1030 - timedelta(minutes=30))
+
+    cancelled = await cancel(session_factory, patient_id="pat_001", booking_id=uuid.UUID(mine["id"]))
+
+    assert cancelled["status"] == "NO_SHOW" and cancelled["late_cancellation"] is True
+
+
+async def test_a_patient_cannot_cancel_or_move_someone_elses_booking(session_factory):
+    theirs = await book(session_factory, **cardiology("pat_001"))
+    booking_id = uuid.UUID(theirs["id"])
+
+    for attempt in (
+        cancel(session_factory, patient_id="pat_002", booking_id=booking_id),
+        reschedule(session_factory, patient_id="pat_002", booking_id=booking_id, scheduled_for=TUESDAY_1030.replace(minute=0)),
+        cancel(session_factory, patient_id="pat_010", booking_id=booking_id),  # another society
+    ):
+        with pytest.raises(ConciergeError) as refused:
+            await attempt
+        assert refused.value.code == ErrorCode.BOOKING_NOT_FOUND
+
+    async with session_factory() as session:
+        row = await session.scalar(select(ServiceRequest))
+    assert row.status == "BOOKED" and row.patient_id == "pat_001"
+
+
+# ---------- rescheduling ----------
+
+
+async def test_reschedule_moves_the_same_booking_and_frees_the_old_slot(session_factory):
+    mine = await book(session_factory, **cardiology("pat_001"))
+    booking_id = uuid.UUID(mine["id"])
+
+    moved = await reschedule(
+        session_factory, patient_id="pat_001", booking_id=booking_id, scheduled_for=TUESDAY_1030.replace(minute=0)
+    )
+    again = await reschedule(
+        session_factory, patient_id="pat_001", booking_id=booking_id, scheduled_for=TUESDAY_1030.replace(minute=0)
+    )
+    theirs = await book(session_factory, **cardiology("pat_002"))  # the old 10:30 slot
+
+    assert moved["id"] == mine["id"] and moved["rescheduled"] is True
+    assert moved["scheduled_for"] == "2027-01-12T10:00:00+05:30"
+    assert moved["previous_scheduled_for"] == "2027-01-12T10:30:00+05:30"
+    assert again["unchanged"] is True
+    assert theirs["scheduled_for"] == "2027-01-12T10:30:00+05:30"
+    assert await count_bookings(session_factory) == 2
+
+
+async def test_reschedule_into_a_taken_slot_is_refused_and_changes_nothing(session_factory):
+    mine = await book(session_factory, **cardiology("pat_001"))
+    await book(session_factory, **cardiology("pat_002", when=TUESDAY_1030.replace(minute=0)))
+
+    with pytest.raises(ConciergeError) as refused:
+        await reschedule(
+            session_factory, patient_id="pat_001", booking_id=uuid.UUID(mine["id"]), scheduled_for=TUESDAY_1030.replace(minute=0)
+        )
+
+    assert refused.value.code == ErrorCode.SLOT_TAKEN
+    assert refused.value.suggestions[0]["scheduled_for"] == "2027-01-19T10:00:00+05:30"
+    assert_clear_sentence(refused.value.message)
+    async with session_factory() as session:
+        row = await session.get(ServiceRequest, uuid.UUID(mine["id"]))
+    assert row.scheduled_for == TUESDAY_1030
+
+
+async def test_reschedule_to_a_time_off_the_grid_or_too_soon_is_refused(session_factory, monkeypatch):
+    mine = await book(session_factory, **cardiology("pat_001"))
+    booking_id = uuid.UUID(mine["id"])
+
+    with pytest.raises(ConciergeError) as off_grid:
+        await reschedule(session_factory, patient_id="pat_001", booking_id=booking_id, scheduled_for=TUESDAY_1030.replace(minute=15))
+    assert off_grid.value.code == ErrorCode.NOT_A_SLOT
+
+    set_clock(monkeypatch, TUESDAY_1030 - timedelta(minutes=45))
+    with pytest.raises(ConciergeError) as too_late:
+        await reschedule(session_factory, patient_id="pat_001", booking_id=booking_id, scheduled_for=TUESDAY_1030 + timedelta(days=7))
+    assert too_late.value.code == ErrorCode.TOO_LATE_TO_CHANGE
+    assert "wellness room" in too_late.value.message

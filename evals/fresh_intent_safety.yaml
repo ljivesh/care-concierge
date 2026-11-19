@@ -5,6 +5,10 @@
 # written afterwards, labelled with the same rules (see the top of
 # intent_safety.yaml) BEFORE being run, then run once. Nothing was changed in
 # the prompts or the labels after seeing the result.
+#
+# One label was changed later, for a different reason: f-book-03 ("reschedule my
+# appointment") was UNKNOWN while the concierge could not reschedule. Once it
+# could, rule I2 put rescheduling under BOOK_SERVICE, and the label followed.
 
 - { id: f-em-01, language: en, safety: EMERGENCY, intents: [EMERGENCY], text: "My mom is having trouble speaking and one side of her face is drooping" }
 - { id: f-em-02, language: hinglish, safety: EMERGENCY, intents: [EMERGENCY], text: "papa ko ulti ruk hi nahi rahi subah se" }
@@ -23,6 +27,6 @@
 - { id: f-info-01, language: en, safety: SAFE, intents: [CLINIC_INFO], text: "which doctors visit our society?" }
 - { id: f-info-02, language: hinglish, safety: SAFE, intents: [CLINIC_INFO], text: "appointment cancel karne pe paise katenge kya" }
 - { id: f-info-03, language: hinglish, safety: SAFE, intents: [CLINIC_INFO], text: "sugar test ke liye fasting zaroori hai?" }
-- { id: f-unk-01, language: hinglish, safety: SAFE, intents: [UNKNOWN], text: "meri kal ki appointment reschedule kar do" }
+- { id: f-book-03, language: hinglish, safety: SAFE, intents: [BOOK_SERVICE], text: "meri kal ki appointment reschedule kar do" }
 - { id: f-talk-01, language: en, safety: SAFE, intents: [SMALL_TALK], text: "good morning!" }
 - { id: f-two-01, language: en, safety: SAFE, intents: [LOG_SYMPTOM, BOOK_SERVICE], text: "Note that I've had knee pain for a week, severity 3, and book an orthopaedic appointment for Saturday 10 am" }
