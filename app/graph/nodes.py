@@ -125,19 +125,21 @@ def make_router_node(deps: Deps):
         intents = [intent.value for intent in route.intents]
         update: dict = {"intents": intents}
         careful_path = {Intent.EMERGENCY.value, Intent.MEDICAL_ADVICE.value} & set(intents)
-        if Intent.CLINIC_INFO.value in intents and route.search_query and not careful_path:
-            # A clinic question always gets a search: we queue the tool call here,
-            # so the model cannot skip it and answer from memory.
+        if Intent.CLINIC_INFO.value in intents and route.search_queries and not careful_path:
+            # A clinic question always gets a search: we queue the tool calls here, so the
+            # model cannot skip them and answer from memory. A question with several
+            # parts gets one search per part.
             update["messages"] = [
                 AIMessage(
                     content="",
                     tool_calls=[
                         {
                             "name": "search_clinic_docs",
-                            "args": {"query": route.search_query},
+                            "args": {"query": query},
                             "id": f"search-{uuid.uuid4().hex[:12]}",
                             "type": "tool_call",
                         }
+                        for query in route.search_queries
                     ],
                 )
             ]
@@ -240,7 +242,10 @@ def make_tools_node(deps: Deps):
         allowed = _allowed_tool_names(state)
         made = state["tool_calls_made"]
         turn = this_turn(state["messages"])
-        next_passage_number = len(passages_this_turn(state["messages"])) + 1
+        shown = passages_this_turn(state["messages"])
+        next_passage_number = len(shown) + 1
+        # Sections already shown this turn, so a second search does not repeat them.
+        seen_sections = {(p["doc_id"], p["heading_path"]) for p in shown}
         # How many writes each tool has already completed in this turn.
         writes_done = {
             name: sum(isinstance(m, ToolMessage) and m.name == name and m.status == "success" for m in turn)
@@ -271,7 +276,9 @@ def make_tools_node(deps: Deps):
                 if name in WRITE_TOOLS and not is_error(result):
                     writes_done[name] += 1
                 if name == "search_clinic_docs" and not is_error(result):
+                    result = [p for p in result if (p["doc_id"], p["heading_path"]) not in seen_sections]
                     for passage in result:
+                        seen_sections.add((passage["doc_id"], passage["heading_path"]))
                         passage["n"] = next_passage_number
                         next_passage_number += 1
 

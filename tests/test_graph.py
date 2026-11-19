@@ -60,14 +60,14 @@ def must_not_be_called(what: str):
     return fail
 
 
-def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, language=Language.EN, intents=None, search_query=None, reply=None):
+def script(monkeypatch, *, verdict=SafetyVerdict.SAFE, language=Language.EN, intents=None, search_queries=(), reply=None):
     """Replace the three model calls. Anything left as None must not be called."""
 
     async def fake_safety(llm, message):
         return SafetyDecision(verdict=verdict, language=language)
 
     async def fake_router(llm, conversation):
-        return Route(intents=intents, search_query=search_query)
+        return Route(intents=intents, search_queries=list(search_queries))
 
     monkeypatch.setattr(safety, "ask_model", fake_safety)
     monkeypatch.setattr(router, "ask_model", fake_router if intents else must_not_be_called("the router"))
@@ -359,7 +359,7 @@ async def test_clinic_answer_is_searched_in_the_patients_society_and_cited(deps,
         monkeypatch,
         language=Language.HI,
         intents=[Intent.CLINIC_INFO],
-        search_query="wellness room opening time on Sunday",
+        search_queries=["wellness room opening time on Sunday"],
         reply=answers_from_passages,
     )
 
@@ -376,7 +376,7 @@ async def test_clinic_answer_is_searched_in_the_patients_society_and_cited(deps,
 
 async def test_question_outside_the_corpus_gets_the_fixed_dont_know_reply(deps, checkpointer, monkeypatch, tool_runs):
     # The reply model must not be called: with no evidence there is nothing for it to answer from.
-    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_query="who won the cricket match yesterday")
+    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_queries=["who won the cricket match yesterday"])
 
     state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "Who won the cricket match yesterday?")
 
@@ -391,7 +391,7 @@ async def test_model_says_the_passages_do_not_answer_and_the_patient_gets_the_fi
         return AIMessage(f"\n\n{respond.NO_ANSWER}")
 
     # In-domain wording, so search does return passages; none of them is about a gym.
-    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_query="gym timings", reply=passages_do_not_answer)
+    script(monkeypatch, intents=[Intent.CLINIC_INFO], search_queries=["gym timings"], reply=passages_do_not_answer)
 
     state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "gym ka timing kya hai", language="hinglish")
 
@@ -401,7 +401,7 @@ async def test_model_says_the_passages_do_not_answer_and_the_patient_gets_the_fi
 
 
 async def test_medical_intent_from_the_router_does_not_leave_a_search_behind(deps, checkpointer, monkeypatch, tool_runs):
-    script(monkeypatch, intents=[Intent.MEDICAL_ADVICE, Intent.CLINIC_INFO], search_query="paracetamol dose")
+    script(monkeypatch, intents=[Intent.MEDICAL_ADVICE, Intent.CLINIC_INFO], search_queries=["paracetamol dose"])
 
     state = await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "how much paracetamol is covered and safe")
 
@@ -429,3 +429,32 @@ async def test_two_lab_tests_in_one_message_become_one_visit(deps, checkpointer,
     assert len(rows) == 1 and rows[0].subtypes == ["CBC", "LIPID_PROFILE"]
     results = [m.artifact for m in state["messages"] if isinstance(m, ToolMessage)]
     assert "test_added" not in results[0] and results[1]["test_added"] is True
+
+
+async def test_a_two_part_clinic_question_is_searched_once_per_part(deps, checkpointer, monkeypatch, tool_runs):
+    seen_by_model = {}
+
+    async def answers(llm, tools, messages):
+        passages = "\n".join(str(m.content) for m in messages if isinstance(m, ToolMessage))
+        seen_by_model["text"] = passages
+        seen_by_model["numbers"] = [int(n) for n in re.findall(r"^\[(\d+)\]", passages, flags=re.M)]
+        return AIMessage("Thyroid is covered once a year [1]. Home collection is free.")
+
+    script(
+        monkeypatch,
+        intents=[Intent.CLINIC_INFO],
+        search_queries=["thyroid profile covered under plan", "home sample collection charge"],
+        reply=answers,
+    )
+
+    await send(build_graph(deps, checkpointer), str(uuid.uuid4()), "Is the thyroid test covered, and is home collection free?")
+
+    assert tool_runs == ["search_clinic_docs", "search_clinic_docs"]
+    # Both facts reached the reply model: one from the plan document, one from the patient's annex.
+    assert "Thyroid Profile (T3, T4, TSH) — covered once per resident per plan year" in seen_by_model["text"]
+    assert "**Home sample collection is free**" in seen_by_model["text"]
+    # Passages are numbered once across both searches, with no section repeated.
+    numbers = seen_by_model["numbers"]
+    assert numbers == list(range(1, len(numbers) + 1)) and len(numbers) > 6
+    headings = re.findall(r"^\[\d+\] (.+)$", seen_by_model["text"], flags=re.M)
+    assert len(headings) == len(set(headings))
