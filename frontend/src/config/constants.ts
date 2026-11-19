@@ -94,3 +94,21 @@ export const STARTER_PROMPTS: StarterPrompt[] = [
     },
   },
 ];
+
+/**
+ * What the bookings panel sends when a button is pressed. A change to a booking
+ * goes through the chat like any other message, so it passes the same safety
+ * check and shows in the conversation.
+ */
+export const BOOKING_ACTION_PROMPT: Record<"cancel" | "reschedule", Record<Language, (what: string) => string>> = {
+  cancel: {
+    en: (what) => `Please cancel my ${what}.`,
+    hi: (what) => `कृपया मेरी ${what} कैंसिल कर दीजिए।`,
+    hinglish: (what) => `Meri ${what} cancel kar do.`,
+  },
+  reschedule: {
+    en: (what) => `I'd like to reschedule my ${what}. Which other slots are free?`,
+    hi: (what) => `मुझे अपनी ${what} का समय बदलना है। और कौन से स्लॉट खाली हैं?`,
+    hinglish: (what) => `Mujhe apni ${what} reschedule karni hai. Aur kaun se slots free hain?`,
+  },
+};

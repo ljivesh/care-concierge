@@ -1,9 +1,11 @@
 import { useChat } from "@ai-sdk/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchTranscript } from "@/lib/api/concierge-api";
 import { ConciergeTransport } from "@/lib/api/concierge-transport";
 import { titleFrom } from "@/lib/helpers/format";
 import { messagesFromTranscript } from "@/lib/helpers/transcript";
+import { useBookingsStore } from "@/lib/store/bookings-store";
+import { useComposerStore } from "@/lib/store/composer-store";
 import { useConversationStore } from "@/lib/store/conversation-store";
 
 /**
@@ -49,6 +51,24 @@ export function useConciergeChat(patientId: string, threadId: string) {
     },
     [busy, patientId, threadId, touch, sendMessage],
   );
+
+  // A message queued from outside the chat (the bookings panel's buttons) is sent
+  // as soon as the conversation is ready for it.
+  const pending = useComposerStore((state) => state.pending);
+  const clearPending = useComposerStore((state) => state.clear);
+  useEffect(() => {
+    if (!pending || busy || restoring) return;
+    clearPending();
+    send(pending);
+  }, [pending, busy, restoring, clearPending, send]);
+
+  // When a turn finishes, the bookings panel reloads: the turn may have changed a booking.
+  const refreshBookings = useBookingsStore((state) => state.refresh);
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (wasBusy.current && !busy) void refreshBookings(patientId);
+    wasBusy.current = busy;
+  }, [busy, patientId, refreshBookings]);
 
   /** Resend the last message with the same id, so the server does not act twice. */
   const retry = useCallback(() => {

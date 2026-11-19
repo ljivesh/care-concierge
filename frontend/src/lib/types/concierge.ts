@@ -36,7 +36,7 @@ export interface ChatRequest {
 
 export type TranscriptMessage =
   | { role: "user"; content: string }
-  | { role: "assistant"; content: string }
+  | { role: "assistant"; content: string; citations?: Citation[] }
   | { role: "tool_call"; id: string; name: string; args: unknown }
   | { role: "tool_result"; id: string; name: string; status: ToolStatus; result: unknown };
 

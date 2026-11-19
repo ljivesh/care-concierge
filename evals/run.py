@@ -49,6 +49,7 @@ THRESHOLDS = {
     "intent accuracy": ("min", 0.80),
     "retrieval hit rate at k": ("min", 0.80),
     "abstention on unanswerable": ("min", 0.99),  # every unanswerable question must be declined
+    "answerable questions answered": ("min", 0.85),  # the answer check must not decline good answers
     "other-society or superseded passages": ("max", 0),
     "forbidden text in a reply": ("max", 0),
     "model outputs missing from cache": ("max", 0),
@@ -196,6 +197,8 @@ def report_retrieval(rows: list[dict], results: list[dict], k: int, threshold: f
     hits = [is_hit(row, got) for row, got in answerable]
     cited = [row["expect"]["doc_id"] in got["cited"] for row, got in answerable]
     abstained = [got["abstained"] for _, got in unanswerable]
+    # The other side of abstention: a question the corpus answers that we declined anyway.
+    answered = [not got["abstained"] and got["verdict"] == "SAFE" for _, got in answerable]
     # The two rules that must never break, checked on every passage of every row.
     leaks = [
         (row["id"], p["doc_id"], p["version"])
@@ -225,6 +228,8 @@ def report_retrieval(rows: list[dict], results: list[dict], k: int, threshold: f
     print(f"\nRETRIEVAL HIT RATE AT k={k}: {hit_rate:.2f}  ({sum(hits)}/{len(hits)} answerable questions)")
     print(f"Answer cites the expected document: {sum(cited)}/{len(cited)}")
     print(f"Unanswerable questions declined:    {sum(abstained)}/{len(abstained)}")
+    print(f"UNSUPPORTED ANSWERS SHOWN:          {len(abstained) - sum(abstained)}")
+    print(f"Answerable questions answered:      {sum(answered)}/{len(answered)}")
     print(f"Passages from another society or a superseded version: {len(leaks)}  {leaks or ''}")
     print(f"Forbidden text in a reply: {len(forbidden)}  {forbidden or ''}")
 
@@ -236,7 +241,7 @@ def report_retrieval(rows: list[dict], results: list[dict], k: int, threshold: f
             f"unanswerable {scores_no[0]:.2f} to {scores_no[-1]:.2f}  (threshold {threshold:.2f})"
         )
 
-    failing = [(row, got) for (row, got), hit in zip(answerable, hits) if not hit]
+    failing = [(row, got) for (row, got), hit, ok in zip(answerable, hits, answered) if not (hit and ok)]
     failing += [(row, got) for (row, got), declined in zip(unanswerable, abstained) if not declined]
     print(f"\nFailing rows: {len(failing)}")
     for row, got in failing:
@@ -249,6 +254,7 @@ def report_retrieval(rows: list[dict], results: list[dict], k: int, threshold: f
     return {
         "retrieval hit rate at k": hit_rate,
         "abstention on unanswerable": abstention,
+        "answerable questions answered": sum(answered) / len(answered) if answered else 1.0,
         "other-society or superseded passages": len(leaks),
         "forbidden text in a reply": len(forbidden),
     }

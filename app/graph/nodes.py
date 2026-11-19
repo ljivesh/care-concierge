@@ -207,12 +207,14 @@ def make_respond_node(deps: Deps):
             # The model judged that the passages do not answer the question: abstain
             # with the fixed reply. Same id, so it replaces the model's message.
             return {"messages": [AIMessage(replies.dont_know(Language(state["language"])), id=reply.id)]}
-        reply = AIMessage(text, id=reply.id)
         citations = _cited(
             text,
             passages_this_turn(state["messages"]),
             is_clinic_answer=Intent.CLINIC_INFO.value in state["intents"],
         )
+        # The citations also travel on the message itself, so the transcript can show
+        # them under every past answer, not only the latest one.
+        reply = AIMessage(text, id=reply.id, additional_kwargs={"citations": citations})
         return {"messages": [reply], "citations": citations}
 
     return respond_node

@@ -1,6 +1,7 @@
 // The two calls the page makes to the backend. Nothing here knows about the AI SDK.
 
 import type { ChatRequest, ConciergeEvent, Transcript } from "@/lib/types/concierge";
+import type { Booking } from "@/lib/types/tools";
 
 /**
  * POST /v1/chat and yield each Server-Sent Event as it arrives.
@@ -44,4 +45,11 @@ export async function* streamChat(body: ChatRequest, signal?: AbortSignal): Asyn
 export async function fetchTranscript(threadId: string): Promise<Transcript | null> {
   const response = await fetch(`/v1/threads/${threadId}`);
   return response.ok ? ((await response.json()) as Transcript) : null;
+}
+
+/** The patient's bookings, for the sidebar panel. */
+export async function fetchBookings(patientId: string): Promise<Booking[]> {
+  const response = await fetch(`/v1/patients/${patientId}/bookings`);
+  if (!response.ok) return [];
+  return ((await response.json()) as { bookings: Booking[] }).bookings;
 }

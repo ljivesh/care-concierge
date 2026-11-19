@@ -32,6 +32,7 @@ export function messagesFromTranscript(transcript: Transcript): UIMessage[] {
       messages.push({ id: crypto.randomUUID(), role: "user", parts: [{ type: "text", text: entry.content }] });
     } else if (entry.role === "assistant") {
       reply.push({ type: "text", text: entry.content });
+      reply.push(...(entry.citations ?? []).map(citationPart)); // each answer keeps its own sources
     } else if (entry.role === "tool_call") {
       reply.push({
         type: "dynamic-tool",
@@ -57,8 +58,6 @@ export function messagesFromTranscript(transcript: Transcript): UIMessage[] {
     }
   }
 
-  // The server keeps citations for the most recent reply only.
-  reply.push(...transcript.citations.map(citationPart));
   closeReply();
   return messages;
 }

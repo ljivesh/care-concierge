@@ -108,6 +108,17 @@ async def chat(body: ChatRequest, request: Request) -> StreamingResponse:
     )
 
 
+@app.get("/v1/patients/{patient_id}/bookings")
+async def patient_bookings(patient_id: str, request: Request) -> dict:
+    """The patient's bookings, for the "My bookings" panel. Read-only: changes go through chat."""
+    async with request.app.state.session_factory() as session:
+        patient = await scoping.get_patient(session, patient_id)
+        if patient is None:
+            raise HTTPException(404, "We could not find that patient.")
+        bookings = await scoping.list_bookings(session, society_id=patient.society_id, patient_id=patient.id)
+    return {"patient_id": patient.id, "bookings": bookings}
+
+
 @app.get("/v1/threads/{thread_id}")
 async def transcript(thread_id: str, request: Request) -> dict:
     """The conversation so far, read from the LangGraph checkpointer."""
@@ -125,7 +136,13 @@ async def transcript(thread_id: str, request: Request) -> dict:
             for call in m.tool_calls:
                 messages.append({"role": "tool_call", "id": call["id"], "name": call["name"], "args": call["args"]})
             if str(m.content).strip():
-                messages.append({"role": "assistant", "content": m.content})
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": m.content,
+                        "citations": m.additional_kwargs.get("citations", []),
+                    }
+                )
     return {
         "thread_id": thread_id,
         "patient_id": state["patient_id"],

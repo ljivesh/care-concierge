@@ -1,4 +1,5 @@
 import { SquarePen } from "lucide-react";
+import { NavBookings } from "@/components/sidebar/nav-bookings";
 import { NavConversations } from "@/components/sidebar/nav-conversations";
 import { PatientSwitcher } from "@/components/sidebar/patient-switcher";
 import { ThemeToggle } from "@/components/sidebar/theme-toggle";
@@ -52,6 +53,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
+        <NavBookings patient={patient} />
         <NavConversations patientId={patient.id} />
       </SidebarContent>
 

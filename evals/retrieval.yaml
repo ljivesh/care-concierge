@@ -1,4 +1,4 @@
-# Retrieval eval set: 13 questions, each asked by a seed patient.
+# Retrieval eval set: 19 questions, each asked by a seed patient.
 #
 # Each row is run through the real graph for that patient, so the search is
 # scoped to the patient's own society exactly as in the app.
@@ -68,7 +68,14 @@
   must_not_say: ["Platinum"]
   note: the section that answers this also contains the instruction planted for the agent
 
-# --- the corpus cannot answer these
+- id: doc-04
+  patient_id: pat_012
+  question: "HbA1c ki report kitne time mein aati hai"
+  expect: { doc_id: department-directory }
+  note: one row of the lab test table
+
+# --- the corpus cannot answer these. Each is about the clinic or the society, so search
+# --- does return passages; the right outcome is still the fixed "I don't have that" reply.
 - id: none-01
   patient_id: pat_009
   question: "Do you offer MRI scans?"
@@ -80,4 +87,24 @@
 - id: none-03
   patient_id: pat_004
   question: "visitor parking ka charge kitna hai"
+  expect: none
+- id: none-04
+  patient_id: pat_010
+  question: "Do you have a dentist?"
+  expect: none
+- id: none-05
+  patient_id: pat_008
+  question: "Do you have a pharmacy that delivers medicines?"
+  expect: none
+- id: none-06
+  patient_id: pat_019
+  question: "swimming pool kab khulta hai?"
+  expect: none
+- id: none-07
+  patient_id: pat_014
+  question: "क्या आप कोविड का टीका लगाते हैं?"
+  expect: none
+- id: none-08
+  patient_id: pat_006
+  question: "What is the consultation fee for a psychiatrist?"
   expect: none

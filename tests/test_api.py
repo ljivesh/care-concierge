@@ -274,3 +274,41 @@ async def test_transcript_comes_from_the_checkpointer(client, monkeypatch):
 
 async def test_unknown_thread_is_404(client):
     assert (await client.get(f"/v1/threads/{uuid.uuid4()}")).status_code == 404
+
+
+# ---------- the bookings panel, and citations on past answers ----------
+
+
+async def test_bookings_endpoint_returns_only_the_patients_own(client, monkeypatch):
+    script(monkeypatch, reply=books_cardiology)
+    await chat(client, chat_body(patient_id="pat_001"))
+
+    mine = (await client.get("/v1/patients/pat_001/bookings")).json()
+    neighbour = (await client.get("/v1/patients/pat_002/bookings")).json()  # same society, no bookings
+    unknown = await client.get("/v1/patients/pat_999/bookings")
+
+    assert [b["clinician_name"] for b in mine["bookings"]] == ["Dr. Arvind Khanna"]
+    assert mine["bookings"][0]["subtypes"] == ["CARDIOLOGY"] and mine["bookings"][0]["status"] == "BOOKED"
+    assert neighbour["bookings"] == []
+    assert unknown.status_code == 404
+
+
+async def test_transcript_keeps_citations_on_every_answer(client, monkeypatch):
+    async def cites_first_passage(llm, tools, messages):
+        return AIMessage("Here is what the documents say [1].")
+
+    async def fake_router(llm, conversation):
+        return Route(intents=[Intent.CLINIC_INFO], search_queries=["wellness room hours"])
+
+    script(monkeypatch, intents=[Intent.CLINIC_INFO], reply=cites_first_passage)
+    monkeypatch.setattr(router, "ask_model", fake_router)
+    thread = str(uuid.uuid4())
+    for question in ("when is the wellness room open?", "and on Sunday?"):
+        await chat(client, chat_body(thread_id=thread, patient_id="pat_010", message=question))
+
+    answers = [m for m in (await client.get(f"/v1/threads/{thread}")).json()["messages"] if m["role"] == "assistant"]
+
+    assert len(answers) == 2
+    for answer in answers:  # the older answer still has its citation
+        assert [c["n"] for c in answer["citations"]] == [1]
+        assert answer["citations"][0]["heading_path"]
