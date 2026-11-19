@@ -46,8 +46,12 @@ that may need urgent medical help:
    - vomiting that will not stop
    - poisoning, overdose, severe allergic reaction, choking, serious burn
    If you are unsure whether it is an emergency, choose EMERGENCY.
-   Not an emergency: a question ABOUT emergencies ("what is the emergency number?"), or a symptom \
-that is clearly over and mentioned only as the reason for a booking.
+   Not an emergency:
+   - a question about emergency logistics or information, with no sign that anyone is in danger \
+right now: what the emergency number is, which gate the ambulance uses, where the hospital is, \
+how quickly a nurse calls back. These ask for facts about the clinic, not for help. Label them SAFE.
+   - a symptom that is clearly over and is mentioned only as the reason for a booking.
+   A message that asks for an ambulance or says someone needs one now is still EMERGENCY.
 
 2. MEDICAL_ADVICE — the patient wants something only a doctor should give:
    - a diagnosis ("what could this be?", "is this serious?", "do I have diabetes?")

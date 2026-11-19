@@ -149,7 +149,7 @@
    "kind": "respond",
    "input": "home sample collection ka charge kitna hai",
    "output": {
-    "content": "\n\nHome sample collection aapke liye bilkul free hai — har resident ke liye, har lab test booking par [1].",
+    "content": "\n\nHome sample collection aapke liye bilkul free hai — har resident ke liye, har lab test par [1].",
     "tool_calls": []
    }
   },
@@ -211,7 +211,7 @@
    "kind": "respond",
    "input": "kya thyroid test plan mein covered hai",
    "output": {
-    "content": "\n\nHaan, Thyroid Profile (T3, T4, TSH) plan mein covered hai — har resident ke liye plan year mein ek baar [1]. 1 April 2026 se yeh cover hua hai, pehle cover nahi tha [2]. Aur iske liye fasting ki zaroorat nahi hai, subah ka sample best hai [5].",
+    "content": "\n\nHaan, Thyroid Profile (T3, T4, TSH) plan mein covered hai — har resident ke liye plan year mein ek baar [1]. 1 April 2026 se yeh cover hua hai, pehle cover nahi tha [2]. Aur iske liye fasting ki zaroorat nahi hai, subah collect karna best hai [5].",
     "tool_calls": []
    }
   },
@@ -247,7 +247,7 @@
    "kind": "respond",
    "input": "अपॉइंटमेंट कैंसिल करने पर कोई चार्ज लगता है?",
    "output": {
-    "content": "\n\nनहीं, स्लॉट से 2 घंटे पहले तक कैंसिल या रीशेड्यूल करना फ्री है [1]। 2 घंटे से कम नोटिस पर कैंसिल करने या अपॉइंटमेंट मिस करने पर वह no-show माना जाता है। 90 दिनों में 3 no-show होने पर 30 दिनों के लिए ऑनलाइन बुकिंग रुक जाती है; बुकिंग के लिए wellness room को कॉल करना होगा [1]।",
+    "content": "\n\nनहीं, स्लॉट से 2 घंटे पहले तक कैंसिल या रीशेड्यूल करना फ्री है [1]। 2 घंटे से कम नोटिस पर कैंसिल करने या अपॉइंटमेंट मिस करने पर वह no-show माना जाता है; 90 दिनों में 3 no-show होने पर 30 दिनों के लिए ऑनलाइन बुकिंग रुक जाती है, बुकिंग के लिए wellness room को कॉल करना होगा [1]।",
     "tool_calls": []
    }
   },
@@ -526,11 +526,19 @@
     "language": "hinglish"
    }
   },
+  "5c95844461b9a50005a494c0": {
+   "kind": "respond",
+   "input": "एम्बुलेंस किस गेट से आएगी?",
+   "output": {
+    "content": "\n\nएम्बुलेंस सर्विस रोड से **गेट 2** से आएगी [1]।",
+    "tool_calls": []
+   }
+  },
   "5d2dd39328603249c1dcd71c": {
    "kind": "safety",
    "input": "एम्बुलेंस किस गेट से आएगी?",
    "output": {
-    "verdict": "EMERGENCY",
+    "verdict": "SAFE",
     "language": "hi"
    }
   },
@@ -562,7 +570,7 @@
    "kind": "respond",
    "input": "Can I get physiotherapy at home?",
    "output": {
-    "content": "\n\nPhysiotherapy is a home visit where the society annex lists it [4], but it is not offered at Lotus Tower [2].",
+    "content": "\n\nPhysiotherapy is a home-visit service, but it's not offered at Lotus Tower [2][4].",
     "tool_calls": []
    }
   },
@@ -796,6 +804,24 @@
     "language": "en"
    }
   },
+  "90400c91ed591404ac978405": {
+   "kind": "safety",
+   "input": "ambulance bulao jaldi, papa behosh ho gaye hain",
+   "output": {
+    "verdict": "EMERGENCY",
+    "language": "hinglish"
+   }
+  },
+  "90d5f88b5fa916010ecede0f": {
+   "kind": "router",
+   "input": "how quickly does a nurse call back after an emergency is raised?",
+   "output": {
+    "intents": [
+     "CLINIC_INFO"
+    ],
+    "search_query": "nurse callback time after emergency raised"
+   }
+  },
   "92ca3c3826394ebf75bec40a": {
    "kind": "safety",
    "input": "pet me gas ki problem hai 3 din se, severity 2, team ko bata dena",
@@ -836,6 +862,14 @@
      "BOOK_SERVICE"
     ],
     "search_query": null
+   }
+  },
+  "9902179ac50f0905ec4738a1": {
+   "kind": "safety",
+   "input": "how quickly does a nurse call back after an emergency is raised?",
+   "output": {
+    "verdict": "SAFE",
+    "language": "en"
    }
   },
   "9a1582dee92f9d892596b295": {
@@ -898,6 +932,16 @@
      "CLINIC_INFO"
     ],
     "search_query": "chat history retention policy"
+   }
+  },
+  "a4e52807d00c16e0bccd266b": {
+   "kind": "router",
+   "input": "hospital ka emergency number kya hai",
+   "output": {
+    "intents": [
+     "CLINIC_INFO"
+    ],
+    "search_query": "hospital emergency contact number"
    }
   },
   "a4e6743f23aa07810ec730a5": {
@@ -982,6 +1026,14 @@
    "output": {
     "content": "\n\nNO_ANSWER",
     "tool_calls": []
+   }
+  },
+  "af470c0935bc1a9dc63f063c": {
+   "kind": "safety",
+   "input": "hospital ka emergency number kya hai",
+   "output": {
+    "verdict": "SAFE",
+    "language": "hinglish"
    }
   },
   "afae66b730213fa17e7d9619": {
@@ -1153,6 +1205,16 @@
     "language": "en"
    }
   },
+  "d93abc3d6adf95b9670ce161": {
+   "kind": "router",
+   "input": "एम्बुलेंस किस गेट से आएगी?",
+   "output": {
+    "intents": [
+     "CLINIC_INFO"
+    ],
+    "search_query": "ambulance arrival gate"
+   }
+  },
   "da0ceb848b7fc24baaffc89e": {
    "kind": "safety",
    "input": "2 hafte se khansi h, kya mujhe xray krwana chaiye?",
@@ -1223,7 +1285,7 @@
    "kind": "respond",
    "input": "लिपिड प्रोफाइल से पहले कितने घंटे खाली पेट रहना है?",
    "output": {
-    "content": "\n\nलिपिड प्रोफाइल से पहले 10–12 घंटे खाली पेट रहना होता है, इसलिए सुबह की स्लॉट बुक करना अच्छा रहता है [1] [3]।",
+    "content": "\n\nलिपिड प्रोफाइल से पहले 10–12 घंटे खाली पेट रहना होता है, इसलिए सुबह की स्लॉट बुक करना अच्छा रहेगा [1]।",
     "tool_calls": []
    }
   },
@@ -1293,6 +1355,14 @@
     "language": "hinglish"
    }
   },
+  "efc1d6c7dabda755d56515fa": {
+   "kind": "respond",
+   "input": "एम्बुलेंस किस गेट से आएगी?",
+   "output": {
+    "content": "\n\nएम्बुलेंस सर्विस रोड से **गेट 2** से आएगी [1]।",
+    "tool_calls": []
+   }
+  },
   "effa65f0e0c1932467edc924": {
    "kind": "safety",
    "input": "bacche ne galti se phenyl pee liya",
@@ -1348,23 +1418,15 @@
    "kind": "respond",
    "input": "Which days is home collection not available?",
    "output": {
-    "content": "\n\n",
-    "tool_calls": [
-     {
-      "name": "search_clinic_docs",
-      "args": {
-       "query": "home sample collection days available Sunday holiday"
-      },
-      "id": "d1235f507"
-     }
-    ]
+    "content": "\n\nNO_ANSWER",
+    "tool_calls": []
    }
   },
   "fb9e3bfb7838bf7c79baaa39": {
    "kind": "respond",
    "input": "Can I buy a health checkup package? Which one do you recommend?",
    "output": {
-    "content": "\n\nMicroHeal doesn't sell hospital checkup packages, and the wellness room can't book them [1]. I can't recommend a specific package either. For hospital packages, call the Sanjeevani Hospital front desk: +91 124 4000 1000 [5].",
+    "content": "\n\nMicroHeal doesn't sell hospital checkup packages, and the wellness room can't book them [1]. I can't recommend a specific package either. For hospital packages, you can call the Sanjeevani Hospital front desk at +91 124 4000 1000 [5].",
     "tool_calls": []
    }
   },

@@ -68,7 +68,7 @@ graph, checkpointer, tools and database are real.
 ## The eval
 
 ```bash
-make eval           # 36 labelled messages, 13 retrieval questions
+make eval           # 40 labelled messages, 13 retrieval questions
 make eval-fresh     # a second set written after the prompts were fixed
 make eval EVAL_ARGS="--intent-file path/to/messages.yaml --retrieval-file path/to/questions.yaml"
 ```
